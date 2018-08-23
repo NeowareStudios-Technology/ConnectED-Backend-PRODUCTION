@@ -1,0 +1,4 @@
+cron:
+- description: delete past events and save history
+  url: /crons/eventclean
+  schedule: every 2 hours

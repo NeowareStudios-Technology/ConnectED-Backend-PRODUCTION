@@ -1,0 +1,900 @@
+basePath: /_ah/api
+consumes:
+  - application/json
+definitions:
+  ModelsEmptyResponse:
+    properties:
+      nothing:
+        format: int64
+        type: string
+    type: object
+  ModelsEventAddLeaders:
+    properties:
+      leaders:
+        items:
+          type: string
+        type: array
+    type: object
+  ModelsEventApproveRequest:
+    properties:
+      approve_list:
+        items:
+          type: string
+        type: array
+    type: object
+  ModelsEventCreateForm:
+    properties:
+      capacity:
+        format: int64
+        type: string
+      city:
+        type: string
+      date:
+        items:
+          type: string
+        type: array
+      day:
+        items:
+          type: string
+        type: array
+      e_desc:
+        type: string
+      e_photo:
+        type: string
+      e_title:
+        type: string
+      education:
+        type: string
+      end:
+        items:
+          type: string
+        type: array
+      env:
+        type: string
+      interests:
+        items:
+          type: string
+        type: array
+      privacy:
+        type: string
+      qr:
+        type: string
+      req_skills:
+        items:
+          type: string
+        type: array
+      start:
+        items:
+          type: string
+        type: array
+      state:
+        type: string
+      street:
+        type: string
+      zip_code:
+        type: string
+    required:
+      - city
+      - e_title
+      - env
+      - state
+      - street
+      - zip_code
+    type: object
+  ModelsEventEditForm:
+    properties:
+      capacity:
+        format: int64
+        type: string
+      city:
+        type: string
+      date:
+        items:
+          type: string
+        type: array
+      day:
+        items:
+          type: string
+        type: array
+      e_desc:
+        type: string
+      e_lat:
+        format: double
+        type: number
+      e_lon:
+        format: double
+        type: number
+      e_orig_title:
+        type: string
+      e_photo:
+        type: string
+      e_title:
+        type: string
+      education:
+        type: string
+      end:
+        items:
+          type: string
+        type: array
+      env:
+        type: string
+      interests:
+        type: string
+      privacy:
+        type: string
+      qr:
+        type: string
+      req_skills:
+        type: string
+      search_rad:
+        format: int64
+        type: string
+      start:
+        items:
+          type: string
+        type: array
+      state:
+        type: string
+      street:
+        type: string
+      zip_code:
+        type: string
+    required:
+      - e_orig_title
+    type: object
+  ModelsEventGetResponse:
+    properties:
+      capacity:
+        format: int64
+        type: string
+      city:
+        type: string
+      date:
+        items:
+          type: string
+        type: array
+      day:
+        items:
+          type: string
+        type: array
+      e_desc:
+        type: string
+      e_lat:
+        format: double
+        type: number
+      e_lon:
+        format: double
+        type: number
+      e_organizer:
+        type: string
+      e_orig_title:
+        type: string
+      e_photo:
+        type: string
+      e_title:
+        type: string
+      education:
+        type: string
+      end:
+        items:
+          type: string
+        type: array
+      env:
+        type: string
+      funds_raised:
+        format: int64
+        type: string
+      interests:
+        items:
+          type: string
+        type: array
+      num_attendees:
+        format: int64
+        type: string
+      num_pending_attendees:
+        format: int64
+        type: string
+      privacy:
+        type: string
+      qr:
+        type: string
+      req_skills:
+        items:
+          type: string
+        type: array
+      start:
+        items:
+          type: string
+        type: array
+      state:
+        type: string
+      street:
+        type: string
+      zip_code:
+        type: string
+    type: object
+  ModelsEventRosterGetResponse:
+    properties:
+      attendees:
+        items:
+          type: string
+        type: array
+      leaders:
+        items:
+          type: string
+        type: array
+      pending_attendees:
+        items:
+          type: string
+        type: array
+      signed_in_attendees:
+        items:
+          type: string
+        type: array
+      signed_out_attendees:
+        items:
+          type: string
+        type: array
+      teams:
+        items:
+          type: string
+        type: array
+    type: object
+  ModelsEventSearchResponse:
+    properties:
+      distances:
+        items:
+          format: double
+          type: number
+        type: array
+      event_ids:
+        items:
+          type: string
+        type: array
+      event_titles:
+        items:
+          type: string
+        type: array
+    type: object
+  ModelsEventUpdatesGetResponse:
+    properties:
+      u_datetime:
+        items:
+          type: string
+        type: array
+      updates:
+        items:
+          type: string
+        type: array
+    type: object
+  ModelsGetEventsInRadiusResponse:
+    properties:
+      distances:
+        items:
+          format: double
+          type: number
+        type: array
+      events:
+        items:
+          type: string
+        type: array
+    type: object
+  ModelsProfileCreateForm:
+    properties:
+      education:
+        type: string
+      first_name:
+        type: string
+      fri:
+        default: true
+        type: boolean
+      interests:
+        items:
+          type: string
+        type: array
+      last_name:
+        type: string
+      lat:
+        format: double
+        type: number
+      lon:
+        format: double
+        type: number
+      mon:
+        default: true
+        type: boolean
+      photo:
+        type: string
+      sat:
+        default: true
+        type: boolean
+      skills:
+        items:
+          type: string
+        type: array
+      sun:
+        default: true
+        type: boolean
+      thu:
+        default: true
+        type: boolean
+      time_day:
+        type: string
+      tue:
+        default: true
+        type: boolean
+      wed:
+        default: true
+        type: boolean
+    required:
+      - education
+      - first_name
+      - last_name
+      - lat
+      - lon
+    type: object
+  ModelsProfileEditForm:
+    properties:
+      education:
+        type: string
+      first_name:
+        type: string
+      fri:
+        type: boolean
+      interests:
+        items:
+          type: string
+        type: array
+      last_name:
+        type: string
+      lat:
+        format: double
+        type: number
+      lon:
+        format: double
+        type: number
+      mon:
+        type: boolean
+      new_password:
+        type: string
+      photo:
+        type: string
+      sat:
+        type: boolean
+      skills:
+        items:
+          type: string
+        type: array
+      sun:
+        type: boolean
+      thu:
+        type: boolean
+      time_day:
+        type: string
+      tue:
+        type: boolean
+      wed:
+        type: boolean
+    type: object
+  ModelsProfileGetResponse:
+    properties:
+      education:
+        type: string
+      first_name:
+        type: string
+      interests:
+        items:
+          type: string
+        type: array
+      last_name:
+        type: string
+      lat:
+        format: double
+        type: number
+      lon:
+        format: double
+        type: number
+      photo:
+        type: string
+      skills:
+        items:
+          type: string
+        type: array
+    required:
+      - education
+      - first_name
+      - last_name
+      - lat
+      - lon
+    type: object
+  ModelsTeamApproveRequest:
+    properties:
+      approve_list:
+        items:
+          type: string
+        type: array
+    type: object
+  ModelsTeamCreateForm:
+    properties:
+      t_desc:
+        type: string
+      t_name:
+        type: string
+      t_photo:
+        type: string
+      t_privacy:
+        type: string
+    required:
+      - t_name
+    type: object
+  ModelsTeamEditForm:
+    properties:
+      t_desc:
+        type: string
+      t_name:
+        type: string
+      t_orig_name:
+        type: string
+      t_photo:
+        type: string
+      t_privacy:
+        type: string
+    required:
+      - t_orig_name
+    type: object
+  ModelsTeamGetResponse:
+    properties:
+      funds_raised:
+        format: int64
+        type: string
+      t_desc:
+        type: string
+      t_members:
+        format: int64
+        type: string
+      t_name:
+        type: string
+      t_organizer:
+        type: string
+      t_orig_name:
+        type: string
+      t_pending_members:
+        format: int64
+        type: string
+      t_photo:
+        type: string
+      t_privacy:
+        type: string
+    type: object
+  ModelsTeamRequest:
+    properties:
+      team:
+        type: string
+    type: object
+  ModelsTeamRosterGetResponse:
+    properties:
+      leaders:
+        items:
+          type: string
+        type: array
+      members:
+        items:
+          type: string
+        type: array
+      pending_members:
+        items:
+          type: string
+        type: array
+    type: object
+host: connected-dev-214119.appspot.com
+security:
+- firebase: []
+info:
+  description: connectED API v1.
+  title: connected
+  version: v1
+paths:
+  /connected/v1/events:
+    post:
+      operationId: connectEDApi_createEvent
+      parameters:
+        - in: body
+          name: body
+          schema:
+            $ref: '#/definitions/ModelsEventCreateForm'
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/ModelsEmptyResponse'
+    put:
+      operationId: connectEDApi_editEvent
+      parameters:
+        - in: body
+          name: body
+          schema:
+            $ref: '#/definitions/ModelsEventEditForm'
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/ModelsEmptyResponse'
+  /connected/v1/events/prefill:
+    get:
+      operationId: connectEDApi_getEventsInRadius
+      parameters: []
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/ModelsGetEventsInRadiusResponse'
+  /connected/v1/events/search:
+    get:
+      operationId: connectEDApi_searchEvent
+      parameters:
+        - in: query
+          name: search_term
+          required: true
+          type: string
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/ModelsEventSearchResponse'
+  '/connected/v1/events/{e_organizer_email}/{url_event_orig_name}':
+    get:
+      operationId: connectEDApi_getEvent
+      parameters:
+        - in: path
+          name: e_organizer_email
+          required: true
+          type: string
+        - in: path
+          name: url_event_orig_name
+          required: true
+          type: string
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/ModelsEventGetResponse'
+  '/connected/v1/events/{e_organizer_email}/{url_event_orig_name}/approve':
+    put:
+      operationId: connectEDApi_eventApprovePending
+      parameters:
+        - in: body
+          name: body
+          schema:
+            $ref: '#/definitions/ModelsEventApproveRequest'
+        - in: path
+          name: e_organizer_email
+          required: true
+          type: string
+        - in: path
+          name: url_event_orig_name
+          required: true
+          type: string
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/ModelsEmptyResponse'
+  '/connected/v1/events/{e_organizer_email}/{url_event_orig_name}/qr':
+    delete:
+      operationId: connectEDApi_qrSignOutEvent
+      parameters:
+        - in: path
+          name: e_organizer_email
+          required: true
+          type: string
+        - in: path
+          name: url_event_orig_name
+          required: true
+          type: string
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/ModelsEmptyResponse'
+    put:
+      operationId: connectEDApi_qrSignInEvent
+      parameters:
+        - in: path
+          name: e_organizer_email
+          required: true
+          type: string
+        - in: path
+          name: url_event_orig_name
+          required: true
+          type: string
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/ModelsEmptyResponse'
+  '/connected/v1/events/{e_organizer_email}/{url_event_orig_name}/registration':
+    delete:
+      operationId: connectEDApi_deregisterForEvent
+      parameters:
+        - in: path
+          name: e_organizer_email
+          required: true
+          type: string
+        - in: path
+          name: url_event_orig_name
+          required: true
+          type: string
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/ModelsEmptyResponse'
+    put:
+      operationId: connectEDApi_RegisterForEvent
+      parameters:
+        - in: body
+          name: body
+          schema:
+            $ref: '#/definitions/ModelsTeamRequest'
+        - in: path
+          name: e_organizer_email
+          required: true
+          type: string
+        - in: path
+          name: url_event_orig_name
+          required: true
+          type: string
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/ModelsEmptyResponse'
+  '/connected/v1/events/{e_organizer_email}/{url_event_orig_name}/roster':
+    get:
+      operationId: connectEDApi_getEventRoster
+      parameters:
+        - in: path
+          name: e_organizer_email
+          required: true
+          type: string
+        - in: path
+          name: url_event_orig_name
+          required: true
+          type: string
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/ModelsEventRosterGetResponse'
+  '/connected/v1/events/{e_organizer_email}/{url_event_orig_name}/updates':
+    get:
+      operationId: connectEDApi_getEventUpdates
+      parameters:
+        - in: path
+          name: e_organizer_email
+          required: true
+          type: string
+        - in: path
+          name: url_event_orig_name
+          required: true
+          type: string
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/ModelsEventUpdatesGetResponse'
+  '/connected/v1/events/{url_event_orig_name}':
+    delete:
+      operationId: connectEDApi_deleteEvent
+      parameters:
+        - in: query
+          name: e_organizer_email
+          type: string
+        - in: path
+          name: url_event_orig_name
+          required: true
+          type: string
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/ModelsEmptyResponse'
+  '/connected/v1/events/{url_event_orig_name}/leaders':
+    delete:
+      operationId: connectEDApi_deleteEventLeaders
+      parameters:
+        - in: path
+          name: url_event_orig_name
+          required: true
+          type: string
+        - collectionFormat: multi
+          in: query
+          items:
+            type: string
+          name: leaders
+          type: array
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/ModelsEmptyResponse'
+    put:
+      operationId: connectEDApi_addEventLeaders
+      parameters:
+        - in: body
+          name: body
+          schema:
+            $ref: '#/definitions/ModelsEventAddLeaders'
+        - in: path
+          name: url_event_orig_name
+          required: true
+          type: string
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/ModelsEmptyResponse'
+  /connected/v1/profiles:
+    delete:
+      operationId: connectEDApi_deleteProfile
+      parameters: []
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/ModelsEmptyResponse'
+    post:
+      operationId: connectEDApi_createProfile
+      parameters:
+        - in: body
+          name: body
+          schema:
+            $ref: '#/definitions/ModelsProfileCreateForm'
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/ModelsEmptyResponse'
+    put:
+      operationId: connectEDApi_editProfile
+      parameters:
+        - in: body
+          name: body
+          schema:
+            $ref: '#/definitions/ModelsProfileEditForm'
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/ModelsEmptyResponse'
+  '/connected/v1/profiles/{email_to_get}':
+    get:
+      operationId: connectEDApi_getProfile
+      parameters:
+        - in: path
+          name: email_to_get
+          required: true
+          type: string
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/ModelsProfileGetResponse'
+  /connected/v1/teams:
+    post:
+      operationId: connectEDApi_createTeam
+      parameters:
+        - in: body
+          name: body
+          schema:
+            $ref: '#/definitions/ModelsTeamCreateForm'
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/ModelsEmptyResponse'
+    put:
+      operationId: connectEDApi_editTeam
+      parameters:
+        - in: body
+          name: body
+          schema:
+            $ref: '#/definitions/ModelsTeamEditForm'
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/ModelsEmptyResponse'
+  '/connected/v1/teams/{team_name}/approve':
+    put:
+      operationId: connectEDApi_teamApprovePending
+      parameters:
+        - in: body
+          name: body
+          schema:
+            $ref: '#/definitions/ModelsTeamApproveRequest'
+        - in: path
+          name: team_name
+          required: true
+          type: string
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/ModelsEmptyResponse'
+  '/connected/v1/teams/{url_team_orig_name}':
+    delete:
+      operationId: connectEDApi_deleteTeam
+      parameters:
+        - in: path
+          name: url_team_orig_name
+          required: true
+          type: string
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/ModelsEmptyResponse'
+    get:
+      operationId: connectEDApi_getTeam
+      parameters:
+        - in: path
+          name: url_team_orig_name
+          required: true
+          type: string
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/ModelsTeamGetResponse'
+  '/connected/v1/teams/{url_team_orig_name}/registration':
+    delete:
+      operationId: connectEDApi_deregisterForTeam
+      parameters:
+        - in: path
+          name: url_team_orig_name
+          required: true
+          type: string
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/ModelsEmptyResponse'
+    put:
+      operationId: connectEDApi_RegisterForTeam
+      parameters:
+        - in: path
+          name: url_team_orig_name
+          required: true
+          type: string
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/ModelsEmptyResponse'
+  '/connected/v1/teams/{url_team_orig_name}/roster':
+    get:
+      operationId: connectEDApi_getTeamRoster
+      parameters:
+        - in: path
+          name: url_team_orig_name
+          required: true
+          type: string
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/ModelsTeamRosterGetResponse'
+produces:
+  - application/json
+schemes:
+  - https
+securityDefinitions:
+  firebase:
+    authorizationUrl: ''
+    flow: implicit
+    type: oauth2
+    x-google-issuer: 'https://securetoken.google.com/connected-dev-214119'
+    x-google-jwks_uri: 'https://www.googleapis.com/service_accounts/v1/metadata/x509/securetoken@system.gserviceaccount.com'
+    x-google-audiences: 'connected-dev-214119'
+swagger: '2.0'
