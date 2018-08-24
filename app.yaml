@@ -29,6 +29,11 @@ handlers:
   script: background.app
   secure: always
 
+#handler for crons job to distribute hours for past events
+- url: /crons/eventhours
+  script: background.app
+  secure: always
+
 # Third party libraries that are included in the App Engine SDK must be listed
 # here if you want to use them. See
 # https://developers.google.com/appengine/docs/python/tools/libraries27 for
@@ -59,7 +64,7 @@ env_variables:
   # The following values are to be replaced by information from the output of
   # 'gcloud endpoints services deploy swagger.json' command.
   ENDPOINTS_SERVICE_NAME: connected-dev-214119.appspot.com
-  ENDPOINTS_SERVICE_VERSION: 2018-08-22r1
+  ENDPOINTS_SERVICE_VERSION: 2018-08-24r4
 
 
 

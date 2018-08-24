@@ -711,8 +711,8 @@ class connectEDApi(remote.Service):
         start_time_object = datetime.strptime(this_start[counter], '%H:%M').time()
         end_time_object = datetime.strptime(this_end[counter], '%H:%M').time()
         #calculate time difference
-        full_start = getattr(request, 'date') + this_start[counter]
-        full_end = getattr(request, 'date') + this_end[counter]
+        full_start = date + this_start[counter]
+        full_end = date + this_end[counter]
         start_dt = datetime.strptime(full_start, '%Y-%m-%d%H:%M')
         end_dt = datetime.strptime(full_end, '%Y-%m-%d%H:%M')
         
@@ -785,7 +785,7 @@ class connectEDApi(remote.Service):
       date_object = this_day.date_start
       date_string = date_object.strftime('%m/%d/%Y')
       start_object = date_object
-      start_string = start_string.strftime('%H:%M')
+      start_string = start_object.strftime('%H:%M')
       end_object = this_day.date_end
       end_string = end_object.strftime('%H:%M')
       response.date.append(date_string)
@@ -1002,11 +1002,8 @@ class connectEDApi(remote.Service):
         
       date = getattr(request, 'date')
       if date:
-        #get current scheduled days
-        day_entities = Day.query(ancestor=event_entity.key).fetch()
         #clear out current scheduled days
-        for days in day_entities:
-          days.key.delete()
+        del event_entity.sched[:]
         #get day of week, start times, and end times
         days = getattr(request,'day')
         starts = getattr(request,'start')
@@ -1015,11 +1012,11 @@ class connectEDApi(remote.Service):
         #for each new scheduled day, save in Datastore
         for this_date in date:
           full_start_dt = this_date + starts[counter]
-          full_start_dt = this_date + ends[counter]
+          full_end_dt = this_date + ends[counter]
 
           start_dt_object = datetime.strptime(full_start_dt, '%Y-%m-%d%H:%M')
           end_dt_object = datetime.strptime(full_end_dt, '%Y-%m-%d%H:%M')
-          event_entity.sched.append(Day(date_start = start_dt_object,date_end = end_dt_object,day = this_day[counter]))
+          event_entity.sched.append(Day(date_start = start_dt_object,date_end = end_dt_object,day = days[counter]))
                 
           counter += 1
 
@@ -1421,7 +1418,10 @@ class connectEDApi(remote.Service):
       raise endpoints.BadRequestException('User already signed in')
     if check3 == 1:
       raise endpoints.BadRequestException('User already completed this event')
+    now = datetime.now()
+    roster_entity.total_sign_in += 1
     roster_entity.signed_in_attendees.append(user_email)
+    roster_entity.sign_in_times.append(now)
 
     #save qr sign in time to db to calculate hours when signed out
     sign_in_time = datetime.now()
@@ -1473,13 +1473,16 @@ class connectEDApi(remote.Service):
       raise endpoints.BadRequestException('user must be signed in to event to sign out')
     if check2 == 1:
       raise endpoints.BadRequestException('user already signed out')
+    now = datetime.now()
     roster_entity.signed_in_attendees.remove(user_email)
     roster_entity.signed_out_attendees.append(user_email)
+    roster_entity.sign_out_times.append(now)
     
     #calculate difference between sign in time and sign out time
     sign_out_time = datetime.now()
     sign_in_time = profile_entity.qr_in_dt
     elapsed = sign_out_time - sign_in_time
+    hours=0
     if elapsed.days == 0:
       hours = float(elapsed.seconds)/3600
       hours = round(hours,2)
@@ -1487,15 +1490,26 @@ class connectEDApi(remote.Service):
         profile_entity.hours += hours
       else:
         profile_entity.hours = hours
+     
+    #add hours to total event hours
+    roster_entity.total_hours += hours
+    
 
     #remove old sign in time
     profile_entity.qr_in_dt = None
 
     #save event id in attended events list in Profile entity
-    profile_entity.completed_events.append(e_id)
-    profile_entity.attended_events.remove(e_id)
+    if e_id not in profile_entity.completed_events:
+      profile_entity.completed_events.append(e_id)
+      profile_entity.attended_events.remove(e_id)
+      profile_entity.event_hours.append(hours)
+    #get index of completed event
+    event_index = profile_entity.completed_events.index(e_id)
+    if event_index:
+      profile_entity.event_hours[event_index] += hours
     roster_entity.put()
     profile_entity.put()
+
     return EmptyResponse()
 
   #***HELPER FUNCTION: APPROVE PENDING EVENT ATTENDEES***
@@ -2270,6 +2284,12 @@ class connectEDApi(remote.Service):
   path='debug', http_method='GET', name='debug')
   def debug(self, request):
     return self._eventsCleanPast()
+
+  #****ENDPOINT: clean events debugger***
+  @endpoints.method(EMPTY_REQUEST, EmptyResponse,
+  path='debug2', http_method='GET', name='debug2')
+  def debug2(self, request):
+    return self._eventsDistributeRemainingHours()
   """
 
   ##################################################################################
@@ -2282,26 +2302,105 @@ class connectEDApi(remote.Service):
   @staticmethod
   def _eventsCleanPast():
     event_list = Event.query().fetch()
-    now = datetime.now().date()
+    now = datetime.now()
 
-    for event in event_list:
-      num_days = len(event.sched)
-      last_day = event.sched[num_days-1]
-      if last_day.date < now:
-        event_history = EventHistory(
-          e_title = event.e_title,
-          e_orig_title = event.e_orig_title,
-          e_title_index = event.e_title_index,
-          e_organizer = event.e_organizer,
-          sched = event.sched,
-          street = event.street,
-          city = event.city,
-          state = event.state,
-          funds_raised = event.funds_raised
-        )
-        event_history.put()
-        event.key.delete()
+    if event_list:
+      for event in event_list:
+        if event.discard_flag >= len(event.sched):
+          num_days = len(event.sched)
+          last_day = event.sched[num_days-1]
+          if last_day.date_end < now:
+            #get event roster object
+            roster_object = E_Roster.query(ancestor=event.key).get()
+            #get updates object
+            updates_entity = E_Updates.query(ancestor=event.key).get()
+
+            #CALCULATE AVERAGE USER HOURS HERE#####
+            hours = 0
+            if roster_object.total_hours == 0:
+              hours = 0
+            elif roster_object.total_sign_in > 0:
+              hours = roster_object.total_hours/roster_object.total_sign_in
+            #######################################
+            event_history = EventHistory(
+              e_title = event.e_title,
+              e_orig_title = event.e_orig_title,
+              e_title_index = event.e_title_index,
+              e_organizer = event.e_organizer,
+              sched = event.sched,
+              street = event.street,
+              city = event.city,
+              state = event.state,
+              funds_raised = event.funds_raised,
+              average_att_hours = hours
+            )
+            if hasattr(roster_object, 'attendees'):
+              event_history.registered_attendees = roster_object.attendees
+            if hasattr(roster_object, 'signed_in_attendees'):
+              event_history.signed_in_attendees = roster_object.signed_in_attendees
+            event_history.put()
+            event.key.delete()
+            updates_entity.key.delete()
+            roster_object.key.delete()
     
+    return EmptyResponse()
+
+  #***STATIC FUNCTION: CRON JOB FOR DISTRIBUTING HOURS TO EVENT ATTENDEES***
+  #Description: called by cron job every 2 hours to distribute hours and set discard flag to 1 
+  @staticmethod
+  def _eventsDistributeRemainingHours():
+    event_list = Event.query().fetch()
+    now = datetime.now()
+
+    if event_list:
+      #for each event
+      for event in event_list:
+        #get number of days of the event
+        num_days = len(event.sched)
+        #if there are days whose hours have not beet distributed by default yet
+        if event.discard_flag < num_days:
+          #for days whose hours have not been distributed by default yet
+          for x in range(event.discard_flag, num_days):
+            #if the end date for this day of the event has passed
+            if event.sched[x].date_end < now:
+              #get event roster
+              roster_entity = E_Roster.query(ancestor=event.key).get()
+              if hasattr(roster_entity, 'signed_in_attendees'):
+                count = 0
+                #for each signed in attendee
+                for this_attendee in roster_entity.signed_in_attendees:
+                  #if the attendee has not already signed out
+                  if this_attendee not in roster_entity.signed_out_attendees:
+                    #calculate time spent for that attendee
+                    elapsed = event.sched[x].date_end - roster_entity.sign_in_times[count]
+                    hours = float(elapsed.seconds)/3600
+                    hours = round(hours,2)
+                    #add to total hours of event
+                    roster_entity.total_hours += hours
+                    #get profile entity of attendee
+                    this_profile = ndb.Key(Profile, this_attendee).get()
+                    if this_profile:
+                      #add the event to the users completed events
+                      event_string = event.e_organizer + '_' + event.e_orig_title
+                      this_profile.attended_events.remove(event_string)
+                      this_profile.completed_events.append(event_string)
+                      #add the hours spent at this event to event hours
+                      this_profile.event_hours.append(hours)
+                      #add to the attendees total hours
+                      if this_profile.hours:
+                        this_profile.hours += hours
+                      else:
+                        this_profile.hours = hours
+                      this_profile.put()
+                  count += 1
+              del roster_entity.sign_in_times[:]
+              del roster_entity.sign_out_times[:]
+              del roster_entity.signed_in_attendees[:]
+              del roster_entity.signed_out_attendees[:]
+              event.discard_flag += 1
+              roster_entity.put()
+        event.put()
+  
     return EmptyResponse()
 
 

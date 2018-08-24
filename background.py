@@ -18,7 +18,13 @@ class cleanPastEvents(webapp2.RequestHandler):
         connectEDApi._eventsCleanPast()
         self.response.set_status(204)
 
+class distributeEventHours(webapp2.RequestHandler):
+    def get(self):
+        connectEDApi._eventsDistributeRemainingHours()
+        self.response.set_status(204)
+
 
 app = webapp2.WSGIApplication([
-    ('/crons/eventclean', cleanPastEvents)
+    ('/crons/eventclean', cleanPastEvents),
+    ('/crons/eventhours', distributeEventHours)
 ], debug=True)

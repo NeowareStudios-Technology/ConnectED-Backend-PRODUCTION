@@ -436,6 +436,7 @@ class Profile(ndb.Model):
     reports = ndb.StructuredProperty(Report, repeated=True)
     attended_events = ndb.StringProperty(repeated=True)
     completed_events = ndb.StringProperty(repeated=True)
+    event_hours = ndb.FloatProperty(repeated=True)
     #list of created events
     created_events = ndb.StringProperty(repeated=True)
     #list of events user is leader of
@@ -500,6 +501,7 @@ class Event(ndb.Model):
     education= ndb.StringProperty()
     privacy = ndb.StringProperty(required=True,choices=['o','p'])
     qr = ndb.TextProperty()
+    discard_flag = ndb.IntegerProperty(default=0)
 
 class E_Roster(ndb.Model):
     '''E_Roster -- E_Roster object (child of Event object)'''
@@ -508,8 +510,12 @@ class E_Roster(ndb.Model):
     pending_attendees = ndb.StringProperty(repeated=True)
     pending_teams = ndb.StringProperty(repeated=True)
     signed_in_attendees = ndb.StringProperty(repeated=True)
+    sign_in_times = ndb.DateTimeProperty(repeated=True)
     signed_out_attendees = ndb.StringProperty(repeated=True)
+    sign_out_times = ndb.DateTimeProperty(repeated=True)
     leaders = ndb.StringProperty(repeated=True)
+    total_sign_in = ndb.IntegerProperty(default = 0)
+    total_hours = ndb.FloatProperty(default = 0)
 
 class E_Updates(ndb.Model):
     '''E_Updates -- E_Updates object (reference to Event object)'''
@@ -529,6 +535,9 @@ class EventHistory(ndb.Model):
     city = ndb.StringProperty(required=True)
     state = ndb.StringProperty(required=True)
     funds_raised = ndb.IntegerProperty(default=0)
+    registered_attendees = ndb.StringProperty(repeated=True)
+    signed_in_attendees = ndb.StringProperty(repeated=True)
+    average_att_hours = ndb.FloatProperty()
 
 
 
