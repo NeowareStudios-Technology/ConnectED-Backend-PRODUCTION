@@ -329,6 +329,9 @@
           },
           "type": "array"
         },
+        "organizer": {
+          "type": "string"
+        },
         "pending_attendees": {
           "items": {
             "type": "string"
@@ -397,6 +400,17 @@
       },
       "type": "object"
     },
+    "ModelsGetEventsInRadiusByDateResponse": {
+      "properties": {
+        "events": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
     "ModelsGetEventsInRadiusResponse": {
       "properties": {
         "distances": {
@@ -407,6 +421,29 @@
           "type": "array"
         },
         "events": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "ModelsGetProfileEvents": {
+      "properties": {
+        "completed_events": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "created_events": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "registered_events": {
           "items": {
             "type": "string"
           },
@@ -777,6 +814,20 @@
             "description": "A successful response",
             "schema": {
               "$ref": "#/definitions/ModelsGetEventsInRadiusResponse"
+            }
+          }
+        }
+      }
+    },
+    "/connected/v1/events/prefill/dates": {
+      "get": {
+        "operationId": "connectEDApi_getEventsInRadiusByDate",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "A successful response",
+            "schema": {
+              "$ref": "#/definitions/ModelsGetEventsInRadiusByDateResponse"
             }
           }
         }
@@ -1181,6 +1232,27 @@
             "description": "A successful response",
             "schema": {
               "$ref": "#/definitions/ModelsProfileGetResponse"
+            }
+          }
+        }
+      }
+    },
+    "/connected/v1/profiles/{email_to_get}/events": {
+      "get": {
+        "operationId": "connectEDApi_getProfileEvents",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "email_to_get",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response",
+            "schema": {
+              "$ref": "#/definitions/ModelsGetProfileEvents"
             }
           }
         }

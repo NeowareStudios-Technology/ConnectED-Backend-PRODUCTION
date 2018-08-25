@@ -64,6 +64,8 @@ from models import EmptyResponse
 from models import QR_SIGNIN_REQUEST
 from models import EventHistory
 from models import REGISTER_EVENT_REQUEST
+from models import GetProfileEvents
+from models import GetEventsInRadiusByDateResponse
 
 import googlemaps
 
@@ -339,6 +341,7 @@ class connectEDApi(remote.Service):
       roster_entity.pending_members.append(profile_entity.email)
       team_entity.t_pending_members += 1
 
+    '''
     #1)Checks that all registered events have not been deleted, if deleted, remove from list
     #2)if registered event exists and is "open", sign user up for event because they signed up for an "event registered" team
     if team_entity.registered_events:
@@ -355,7 +358,7 @@ class connectEDApi(remote.Service):
             this_event_roster.attendees.append(profile_entity.email)
             this_event_entity.put()
             this_event_roster.put()
-
+    '''
     team_entity.put()
     roster_entity.put()
     return EmptyResponse()
@@ -409,7 +412,6 @@ class connectEDApi(remote.Service):
         team_entity.t_members -= 1
       else:
         raise endpoints.BadRequestException('User already deregistered from team')
-    return_string = request.url_team_orig_name
 
     team_entity.put()
     roster_entity.put()
@@ -457,7 +459,7 @@ class connectEDApi(remote.Service):
         team_entity.t_pending_members-=1
         team_entity.t_members+=1
         
-    
+    '''
     #register just-approved users to any events that team is already signed up for
     if team_entity.registered_events:
       for this_event in team_entity.registered_events:
@@ -470,6 +472,7 @@ class connectEDApi(remote.Service):
               this_event_roster.attendees.append(member)
           this_event_entity.put()
           this_event_roster.put()
+    '''
             
               
     t_roster_entity.put()
@@ -542,6 +545,39 @@ class connectEDApi(remote.Service):
       photo = profile_entity.photo,
     )
     return response
+
+  #***HELPER FUNCTION: GET PROFILE EVENTS***
+  #Description: retrieve event info for a profile
+  #Params: request- GET request url portion sent to getProfileEvents() endpoint 
+  #Returns: specified profile's event info
+  #Called by: getProfileEvents() endpoint
+  def _viewProfileEvents(self, request, user):
+    #get profile entity
+    profile_entity = ndb.Key(Profile, request.email_to_get).get()
+    if not profile_entity:
+      raise endpoints.NotFoundException('Could not find profile in database')
+    
+    #declare reponse and fill out completed_events and created_events
+    response = GetProfileEvents(
+      completed_events = profile_entity.completed_events,
+      created_events = profile_entity.created_events
+    )
+    #append any currently attending events to completed events
+    response.completed_events +=profile_entity.attended_events
+    
+    #get all registered future events and save to reponse
+    event_roster_list = E_Roster.query(E_Roster.attendees == profile_entity.email)
+    for roster in event_roster_list:
+      response.registered_events.append(roster.e_id)
+
+    for event in response.completed_events:
+      if event in response.registered_events:
+        response.registered_events.remove(event)
+
+    return response
+
+
+    
 
   
   #***HELPER FUNCTION: EDIT PROFILE OF LOGGED IN USER***
@@ -661,14 +697,19 @@ class connectEDApi(remote.Service):
   #Params: request- POST request sent to any createEvent endpoint (event info)
   #Returns: request- POST request sent to any createEvent endpoint (event info)
   #Called by: createEvent endpoint
-  @ndb.transactional()
+  @ndb.transactional(xg=True)
   def _createEvent(self, request, user):
+    #get profile entity
+    profile_entity = ndb.Key(Profile, user.email()).get()
+
+    #get event entity
     event_id = user.email()
     temp_title = getattr(request,'e_title')
     url_safe_title = temp_title.replace(" ", "+")
     event_id += '_' + url_safe_title
     e_key = ndb.Key(Event, event_id)
     event = e_key.get()
+    profile_entity.created_events.append(event_id)
     #if event_id already exists, raise exception (one user cannot create 2 events with the same name)
     if event:
       raise endpoints.BadRequestException('Cannot create 2 events with the same name')
@@ -735,10 +776,14 @@ class connectEDApi(remote.Service):
       setattr(event, 'e_location', ndb.GeoPt(this_lat, this_lon))
 
       roster = E_Roster(parent = e_key)
+      roster.e_id = event_id
+      roster.e_title = event.e_title
+      event.e_id = event_id
       updates = E_Updates(parent = e_key)
       updates.put()
       roster.put()
       event.put()
+      profile_entity.put()
     return EmptyResponse()
   
 
@@ -801,22 +846,30 @@ class connectEDApi(remote.Service):
   #Returns: specified event roster info
   #Called by: getEventRoster() endpoint
   def _viewEventRoster(self, request):
+    #convert name in request params to event_id
     decoded_name = request.url_event_orig_name
     decoded_name = decoded_name.replace(" ", "+")
     event_id = request.e_organizer_email + '_' + decoded_name
+    #get event and event roster entities
+    event_entity = ndb.Key(Event, event_id).get()
+    if not event_entity:
+      raise endpoints.NotFoundException('Could not find event')
     event_roster_entity = E_Roster.query(ancestor = ndb.Key(Event, event_id)).get()
     if not event_roster_entity:
       raise endpoints.NotFoundException('Could not find event roster')
     
+    #fill out return reponse of event roster
     response = EventRosterGetResponse(
       teams = event_roster_entity.teams,
       attendees = event_roster_entity.attendees,
       pending_attendees = event_roster_entity.pending_attendees,
       signed_in_attendees = event_roster_entity.signed_in_attendees,
       signed_out_attendees = event_roster_entity.signed_out_attendees,
-      leaders = event_roster_entity.leaders
+      leaders = event_roster_entity.leaders,
+      organizer = event_entity.e_organizer
     )
 
+    #return event roste info
     return response
 
 
@@ -890,6 +943,9 @@ class connectEDApi(remote.Service):
         title_split = e_title.split()
         event_entity.e_title = e_title
         event_entity.e_title_index = title_split
+        #get event roster entity
+        event_roster = E_Roster.query(ancestor = event_entity.key).get()
+        event_roster.e_title = e_title
 
         update = 'Event title updated'
         self._modUpdates(update, updates_entity)
@@ -1412,14 +1468,14 @@ class connectEDApi(remote.Service):
     for attendee3 in roster_entity.signed_out_attendees:
       if attendee3 == user_email:
         check3 = 1
+        roster_entity.signed_out_attendees.remove(attendee3)
     if check == 0:
       raise endpoints.BadRequestException('User must be registered for event to sign in')
     if check2 == 1:
       raise endpoints.BadRequestException('User already signed in')
-    if check3 == 1:
-      raise endpoints.BadRequestException('User already completed this event')
     now = datetime.now()
-    roster_entity.total_sign_in += 1
+    if check3 == 0:
+      roster_entity.total_sign_in += 1
     roster_entity.signed_in_attendees.append(user_email)
     roster_entity.sign_in_times.append(now)
 
@@ -1503,10 +1559,10 @@ class connectEDApi(remote.Service):
       profile_entity.completed_events.append(e_id)
       profile_entity.attended_events.remove(e_id)
       profile_entity.event_hours.append(hours)
-    #get index of completed event
-    event_index = profile_entity.completed_events.index(e_id)
-    if event_index:
-      profile_entity.event_hours[event_index] += hours
+    else:
+      index = profile_entity.completed_events.index(e_id)
+      profile_entity.event_hours[index] += hours
+    
     roster_entity.put()
     profile_entity.put()
 
@@ -1809,6 +1865,80 @@ class connectEDApi(remote.Service):
       response.events.append(final_event.e_organizer + '/' + final_event.e_orig_title)
 
     return response
+
+
+  #***HELPER FUNCTION: GET EVENTS IN RADIUS BY DATE***
+  #Description: retrieve list of event IDs for events within user radius (at most 50)
+  #Params: request- GET request url portion sent to getEventsInRadiusByDate() endpoint (email, password)
+  #Returns: list of events IDs sorted by date
+  #Called by: getEventsInRadiusByDate() endpoint
+  def _getRadiusEventsByDate(self, request,user):
+    prof_entity = ndb.Key(Profile, user.email()).get()
+    user_lat = prof_entity.location.lat
+    user_lon = prof_entity.location.lon
+
+    #get 100 events
+    #implement filter by state here when more users happen
+    event_query = Event.query()
+    events = event_query.fetch(100)
+
+    # ONLY 25 ORIGINS OR DESTINATIONS PER DISTANCE MATRIX REQUEST
+    num_events = len(events)
+    matrixed_events = 0
+    total_matrixed_events = 0
+    large_result_list = []
+    origins = []
+    origins.append([user_lat, user_lon])
+    destinations = []
+   
+    for event in events:
+      if matrixed_events < 25 and total_matrixed_events != num_events-1:
+        destinations.append([event.e_location.lat, event.e_location.lon])
+        matrixed_events += 1
+        total_matrixed_events += 1
+      else:
+        destinations.append([event.e_location.lat, event.e_location.lon])
+        matrixed_events += 1
+        total_matrixed_events += 1
+
+        matrix_result = gmaps.distance_matrix(origins, destinations, mode="driving",
+                                            language="en",
+                                            units="imperial")
+        this_result = matrix_result['rows'][0]['elements']
+        for result in this_result:
+          large_result_list.append(result)
+        matrixed_events = 0
+        destinations = []
+        this_result = []
+
+    response = GetEventsInRadiusByDateResponse()
+    event_index_list = []
+    date_list = []
+    count=0
+    response_count = 0
+    #get up to 50 events that are in radius set by user
+    for result in large_result_list:
+      if response_count >= 50:
+        break
+      if result['distance']['value'] <= (prof_entity.search_rad * 1609.34):
+        event_index_list.append(count)
+        date_list.append(events[count].sched[0].date_start)
+        response_count += 1
+      count += 1
+
+    #sort events in user radius
+    response_dict = dict(zip(event_index_list, date_list))
+    sorted_index_list = []
+    sorted_date_list = []
+    for key, value in sorted(response_dict.iteritems(), key=lambda (k,v): (v,k)):
+      sorted_index_list.append(key)
+      sorted_date_list.append(value)
+    
+    
+    for index in sorted_index_list:
+      response.events.append(events[index].e_organizer+'_'+events[index].e_orig_title)
+
+    return response
     
 
   #***HELPER FUNCTION: ADD LEADERS TO EVENT***
@@ -2025,6 +2155,15 @@ class connectEDApi(remote.Service):
     user = self._authenticateUser()
     return self._viewProfile(request, user)
 
+  #****ENDPOINT: GET PROFILE EVENTS***
+  #-accepts: email to which profile is associated with
+  #-returns: all registered events, attended events, and created events for profile
+  @endpoints.method(PROF_GET_REQUEST, GetProfileEvents, 
+  path='profiles/{email_to_get}/events', http_method='GET', name='getProfileEvents')
+  def getProfileEvents(self, request):
+    user = self._authenticateUser()
+    return self._viewProfileEvents(request, user)
+
   #****ENDPOINT: EDIT PROFILE***
   #-accepts: LoginForm (email, password)
   #-returns: user email
@@ -2087,6 +2226,15 @@ class connectEDApi(remote.Service):
   def getEventsInRadius(self, request):
     user = self._authenticateUser()
     return self._getRadiusEvents(request,user)
+
+  #****ENDPOINT: GET EVENTS IN RADIUS SORTED BY DATE***
+  #-accepts: email and password
+  #-returns: list of 50 closest events
+  @endpoints.method(PROF_DEL_REQUEST, GetEventsInRadiusByDateResponse, 
+  path='events/prefill/dates', http_method='GET', name='getEventsInRadiusByDate')
+  def getEventsInRadiusByDate(self, request):
+    user = self._authenticateUser()
+    return self._getRadiusEventsByDate(request,user)
   
   #****ENDPOINT: EDIT EVENT***
   #-accepts: user email (which is the Profile entity key name)

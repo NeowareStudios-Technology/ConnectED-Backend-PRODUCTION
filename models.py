@@ -163,7 +163,11 @@ class ProfileGetResponse(messages.Message):
     education = messages.StringField(6, required=True)
     skills = messages.StringField(7, repeated=True)
     photo = messages.StringField(8)
-   
+
+class GetProfileEvents(messages.Message):
+    registered_events = messages.StringField(1, repeated=True)
+    completed_events = messages.StringField(2, repeated=True)
+    created_events = messages.StringField(3, repeated=True)
 
 class ProfileEditForm(messages.Message):
     first_name = messages.StringField(1)
@@ -244,6 +248,7 @@ class EventRosterGetResponse(messages.Message):
     signed_in_attendees = messages.StringField(4, repeated=True)
     signed_out_attendees = messages.StringField(5, repeated=True)
     leaders = messages.StringField(6, repeated=True)
+    organizer = messages.StringField(7)
 
 class EventUpdatesGetResponse(messages.Message):
     updates = messages.StringField(1, repeated=True)
@@ -291,6 +296,9 @@ class addEventLeadersResponse(messages.Message):
 class GetEventsInRadiusResponse(messages.Message):
     events = messages.StringField(1, repeated=True)
     distances = messages.FloatField(2, repeated=True)
+
+class GetEventsInRadiusByDateResponse(messages.Message):
+    events = messages.StringField(1, repeated=True)
 
 class EventSearchResponse(messages.Message):
     event_titles = messages.StringField(1, repeated=True)
@@ -484,6 +492,7 @@ class Event(ndb.Model):
     e_organizer = ndb.StringProperty(required=True)
     e_location = ndb.GeoPtProperty()
     e_photo = ndb.TextProperty()
+    e_id = ndb.StringProperty()
     num_attendees = ndb.IntegerProperty(default=0)
     num_teams = ndb.IntegerProperty(default=0)
     num_pending_attendees = ndb.IntegerProperty(default=0)
@@ -506,6 +515,8 @@ class Event(ndb.Model):
 class E_Roster(ndb.Model):
     '''E_Roster -- E_Roster object (child of Event object)'''
     teams = ndb.StringProperty(repeated=True)
+    e_id = ndb.StringProperty()
+    e_title = ndb.StringProperty()
     attendees = ndb.StringProperty(repeated=True)
     pending_attendees = ndb.StringProperty(repeated=True)
     pending_teams = ndb.StringProperty(repeated=True)
