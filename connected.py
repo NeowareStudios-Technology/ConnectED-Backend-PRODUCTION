@@ -117,7 +117,8 @@ class connectEDApi(remote.Service):
     #if team does not exist, create new team and child schedule and store in Datastore
     else:
       profile_entity = ndb.Key(Profile, user.email()).get()
-      profile_entity.created_teams.append(url_safe_name)
+      profile_entity.created_teams.append(getattr(request, 't_name'))
+      profile_entity.created_teams_id.append(url_safe_name)
 
       name_split = getattr(request, 't_name')
       name_split =name_split.split()
@@ -136,6 +137,7 @@ class connectEDApi(remote.Service):
 
       team_roster = T_Roster(parent = t_key)
       team_roster.t_name = team.t_name
+      team_roster.t_orig_name = url_safe_name
 
       team_roster.put()
       team.put()
@@ -597,26 +599,30 @@ class connectEDApi(remote.Service):
     
     #declare reponse and fill out created_teams 
     response = GetProfileTeamsResponse(
-      created_teams = profile_entity.created_teams
+      created_team_names = profile_entity.created_teams,
+      created_team_ids = profile_entity.created_teams_ids
     )
     
     #get all teams user is registered to
     registered_team_rosters = T_Roster.query(T_Roster.members == profile_entity.email).fetch()
     if registered_team_rosters:
       for team_roster in registered_team_rosters:
-        response.registered_teams.append(team_roster.t_name)
+        response.registered_team_names.append(team_roster.t_name)
+        response.registered_team_ids.append(team_roster.t_orig_name)
     
     #get all teams user is pending registration 
     pending_team_rosters = T_Roster.query(T_Roster.pending_members == profile_entity.email).fetch()
     if pending_team_rosters:
       for team_roster in pending_team_rosters:
-        response.pending_teams.append(team_roster.t_name)
+        response.pending_team_names.append(team_roster.t_name)
+        response.pending_team_ids.append(team_roster.t_orig_name)
     
     #get all teams user is leader of
     leader_team_rosters = T_Roster.query(T_Roster.leaders == profile_entity.email).fetch()
     if leader_team_rosters:
       for team_roster in leader_team_rosters:
-        response.registered_teams.append(team_roster.t_name)
+        response.leader_team_names.append(team_roster.t_name)
+        response.leader_team_ids.append(team_roster.t_orig_name)
 
     return response
 

@@ -170,10 +170,14 @@ class GetProfileEvents(messages.Message):
     created_events = messages.StringField(3, repeated=True)
 
 class GetProfileTeamsResponse(messages.Message):
-    created_teams = messages.StringField(1, repeated=True)
-    registered_teams = messages.StringField(2, repeated=True)
-    pending_teams = messages.StringField(3, repeated=True)
-    leader_teams = messages.StringField(4,repeated=True)
+    created_team_names = messages.StringField(1, repeated=True)
+    created_team_ids = messages.StringField(2, repeated=True)
+    registered_team_names = messages.StringField(3, repeated=True)
+    registered_team_ids = messages.StringField(4, repeated=True)
+    pending_team_names = messages.StringField(5, repeated=True)
+    pending_team_ids = messages.StringField(6, repeated=True)
+    leader_team_names = messages.StringField(7,repeated=True)
+    leader_team_ids = messages.StringField(8,repeated=True)
 
 class ProfileEditForm(messages.Message):
     first_name = messages.StringField(1)
@@ -460,6 +464,7 @@ class Profile(ndb.Model):
     #teams = ndb.StringProperty(repeated=True)
     #list of teams user is organizer of
     created_teams = ndb.StringProperty(repeated=True)
+    created_teams_ids = ndb.StringProperty(repeated=True)
     #ist of teams user is leader of 
     #teams_leader = ndb.StringProperty(repeated=True)
     #pending_teams = ndb.StringProperty(repeated=True)
@@ -594,6 +599,7 @@ class T_Roster(ndb.Model):
     members = ndb.StringProperty(repeated=True)
     pending_members = ndb.StringProperty(repeated=True)
     t_name = ndb.StringProperty(required=True)
+    t_orig_name = ndb.StringProperty(required=True)
 
 
 
