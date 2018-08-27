@@ -452,6 +452,35 @@
       },
       "type": "object"
     },
+    "ModelsGetProfileTeamsResponse": {
+      "properties": {
+        "created_teams": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "leader_teams": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "pending_teams": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "registered_teams": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
     "ModelsProfileCreateForm": {
       "properties": {
         "education": {
@@ -1253,6 +1282,27 @@
             "description": "A successful response",
             "schema": {
               "$ref": "#/definitions/ModelsGetProfileEvents"
+            }
+          }
+        }
+      }
+    },
+    "/connected/v1/profiles/{email_to_get}/teams": {
+      "get": {
+        "operationId": "connectEDApi_getProfileTeams",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "email_to_get",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response",
+            "schema": {
+              "$ref": "#/definitions/ModelsGetProfileTeamsResponse"
             }
           }
         }

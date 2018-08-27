@@ -66,6 +66,7 @@ from models import EventHistory
 from models import REGISTER_EVENT_REQUEST
 from models import GetProfileEvents
 from models import GetEventsInRadiusByDateResponse
+from models import GetProfileTeamsResponse
 
 import googlemaps
 
@@ -134,6 +135,7 @@ class connectEDApi(remote.Service):
       )
 
       team_roster = T_Roster(parent = t_key)
+      team_roster.t_name = team.t_name
 
       team_roster.put()
       team.put()
@@ -220,6 +222,10 @@ class connectEDApi(remote.Service):
     if team_entity.t_organizer != user_email:
       raise endpoints.UnauthorizedException('Only team organizer can edit team')
 
+    team_roster_entity = T_Roster.query(ancestor=team_entity.key).get()
+    if not team_roster_entity:
+      raise endpoints.NotFoundException('Team roster not found')
+
     #check each message field, if it exists, change the profile property to its value
     teamName = getattr(request,'t_name')
     urlsafe_teamName = teamName.replace(" ", "+")
@@ -230,6 +236,8 @@ class connectEDApi(remote.Service):
       name_split = teamName.split()
       team_entity.t_name = teamName
       team_entity.t_name_index = name_split
+
+      team_roster_entity.t_name = teamName
 
     teamDesc = getattr(request,'t_desc')
     if teamDesc:
@@ -246,15 +254,14 @@ class connectEDApi(remote.Service):
       #if changing to open (public) event, convert all pending
       #attendees to attendees as long as there is capacity
       if privacy == 'o':
-        team_roster_entity = T_Roster.query(ancestor=team_entity.key).get()
         if team_roster_entity:
           team_roster_entity.members.append(team_roster_entity.pending_members)
           team_roster_entity.pending_members = None
           team_entity.t_members += team_entity.t_pending_members
           team_entity.t_pending_members = 0
-          team_roster_entity.put()
     
     team_entity.put()
+    team_roster_entity.put()
 
     return EmptyResponse()
   
@@ -577,7 +584,41 @@ class connectEDApi(remote.Service):
     return response
 
 
+  #***HELPER FUNCTION: GET PROFILE TEAMS***
+  #Description: retrieve teams info for a profile
+  #Params: request- GET request url portion sent to getProfileTeams() endpoint 
+  #Returns: specified profile's team info
+  #Called by: getProfileTeams() endpoint
+  def _viewProfileTeams(self, request, user):
+    #get profile entity
+    profile_entity = ndb.Key(Profile, request.email_to_get).get()
+    if not profile_entity:
+      raise endpoints.NotFoundException('Could not find profile in database')
     
+    #declare reponse and fill out created_teams 
+    response = GetProfileTeamsResponse(
+      created_teams = profile_entity.created_teams
+    )
+    
+    #get all teams user is registered to
+    registered_team_rosters = T_Roster.query(T_Roster.members == profile_entity.email).fetch()
+    if registered_team_rosters:
+      for team_roster in registered_team_rosters:
+        response.registered_teams.append(team_roster.t_name)
+    
+    #get all teams user is pending registration 
+    pending_team_rosters = T_Roster.query(T_Roster.pending_members == profile_entity.email).fetch()
+    if pending_team_rosters:
+      for team_roster in pending_team_rosters:
+        response.pending_teams.append(team_roster.t_name)
+    
+    #get all teams user is leader of
+    leader_team_rosters = T_Roster.query(T_Roster.leaders == profile_entity.email).fetch()
+    if leader_team_rosters:
+      for team_roster in leader_team_rosters:
+        response.registered_teams.append(team_roster.t_name)
+
+    return response
 
   
   #***HELPER FUNCTION: EDIT PROFILE OF LOGGED IN USER***
@@ -2163,6 +2204,15 @@ class connectEDApi(remote.Service):
   def getProfileEvents(self, request):
     user = self._authenticateUser()
     return self._viewProfileEvents(request, user)
+
+  #****ENDPOINT: GET PROFILE TEAMS***
+  #-accepts: email to which profile is associated with
+  #-returns: all registered teams
+  @endpoints.method(PROF_GET_REQUEST, GetProfileTeamsResponse, 
+  path='profiles/{email_to_get}/teams', http_method='GET', name='getProfileTeams')
+  def getProfileTeams(self, request):
+    user = self._authenticateUser()
+    return self._viewProfileTeams(request, user)
 
   #****ENDPOINT: EDIT PROFILE***
   #-accepts: LoginForm (email, password)

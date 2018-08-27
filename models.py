@@ -169,6 +169,12 @@ class GetProfileEvents(messages.Message):
     completed_events = messages.StringField(2, repeated=True)
     created_events = messages.StringField(3, repeated=True)
 
+class GetProfileTeamsResponse(messages.Message):
+    created_teams = messages.StringField(1, repeated=True)
+    registered_teams = messages.StringField(2, repeated=True)
+    pending_teams = messages.StringField(3, repeated=True)
+    leader_teams = messages.StringField(4,repeated=True)
+
 class ProfileEditForm(messages.Message):
     first_name = messages.StringField(1)
     last_name = messages.StringField(2)
@@ -587,6 +593,7 @@ class T_Roster(ndb.Model):
     leaders = ndb.StringProperty(repeated=True)
     members = ndb.StringProperty(repeated=True)
     pending_members = ndb.StringProperty(repeated=True)
+    t_name = ndb.StringProperty(required=True)
 
 
 
