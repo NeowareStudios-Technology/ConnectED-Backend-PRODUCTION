@@ -107,6 +107,8 @@ class TeamCreateForm(messages.Message):
     t_photo = messages.StringField(3)
     #t_capacity = messages.IntegerField(4)
     t_privacy = messages.StringField(4)
+    t_city = messages.StringField(5)
+    t_state = messages.StringField(6)
 
 class TeamGetResponse(messages.Message):
     t_name = messages.StringField(1)
@@ -119,6 +121,8 @@ class TeamGetResponse(messages.Message):
     t_privacy = messages.StringField(7)
     funds_raised = messages.IntegerField(8)
     t_pending_members = messages.IntegerField(9)
+    t_city = messages.StringField(10)
+    t_state = messages.StringField(11)
 
 class TeamRosterGetResponse(messages.Message):
     leaders = messages.StringField(1, repeated=True)
@@ -133,6 +137,8 @@ class TeamEditForm(messages.Message):
     t_photo = messages.StringField(4)
     #t_capacity = messages.IntegerField(5)
     t_privacy = messages.StringField(5)
+    t_city = messages.StringField(6)
+    t_state = messages.StringField(7)
 
 
 #Profile related messages------------------------------------------------------------
@@ -178,6 +184,10 @@ class GetProfileTeamsResponse(messages.Message):
     pending_team_ids = messages.StringField(6, repeated=True)
     leader_team_names = messages.StringField(7,repeated=True)
     leader_team_ids = messages.StringField(8,repeated=True)
+
+class GetProfileSuggestedTeams(messages.Message):
+    team_names = messages.StringField(1, repeated=True)
+    team_ids = messages.StringField(2, repeated=True)
 
 class ProfileEditForm(messages.Message):
     first_name = messages.StringField(1)
@@ -592,6 +602,9 @@ class Team(ndb.Model):
     t_privacy = ndb.StringProperty(required=True,choices=['o','p'])
     registered_events = ndb.StringProperty(repeated=True)
     pending_events = ndb.StringProperty(repeated=True)
+    t_city = ndb.StringProperty(required=True)
+    t_state = ndb.StringProperty(required=True)
+    t_location = ndb.GeoPtProperty()
 
 class T_Roster(ndb.Model):
     '''T_Roster -- T_Roster object (child of Team object) ''' 

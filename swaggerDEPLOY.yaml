@@ -303,21 +303,48 @@ definitions:
           type: string
         type: array
     type: object
+  ModelsGetProfileSuggestedTeams:
+    properties:
+      team_ids:
+        items:
+          type: string
+        type: array
+      team_names:
+        items:
+          type: string
+        type: array
+    type: object
   ModelsGetProfileTeamsResponse:
     properties:
-      created_teams:
+      created_team_ids:
         items:
           type: string
         type: array
-      leader_teams:
+      created_team_names:
         items:
           type: string
         type: array
-      pending_teams:
+      leader_team_ids:
         items:
           type: string
         type: array
-      registered_teams:
+      leader_team_names:
+        items:
+          type: string
+        type: array
+      pending_team_ids:
+        items:
+          type: string
+        type: array
+      pending_team_names:
+        items:
+          type: string
+        type: array
+      registered_team_ids:
+        items:
+          type: string
+        type: array
+      registered_team_names:
         items:
           type: string
         type: array
@@ -459,6 +486,8 @@ definitions:
     type: object
   ModelsTeamCreateForm:
     properties:
+      t_city:
+        type: string
       t_desc:
         type: string
       t_name:
@@ -467,11 +496,15 @@ definitions:
         type: string
       t_privacy:
         type: string
+      t_state:
+        type: string
     required:
       - t_name
     type: object
   ModelsTeamEditForm:
     properties:
+      t_city:
+        type: string
       t_desc:
         type: string
       t_name:
@@ -482,6 +515,8 @@ definitions:
         type: string
       t_privacy:
         type: string
+      t_state:
+        type: string
     required:
       - t_orig_name
     type: object
@@ -489,6 +524,8 @@ definitions:
     properties:
       funds_raised:
         format: int64
+        type: string
+      t_city:
         type: string
       t_desc:
         type: string
@@ -507,6 +544,8 @@ definitions:
       t_photo:
         type: string
       t_privacy:
+        type: string
+      t_state:
         type: string
     type: object
   ModelsTeamRequest:
@@ -632,24 +671,8 @@ paths:
           schema:
             $ref: '#/definitions/ModelsEmptyResponse'
   '/connected/v1/events/{e_organizer_email}/{url_event_orig_name}/qr':
-    delete:
-      operationId: connectEDApi_qrSignOutEvent
-      parameters:
-        - in: path
-          name: e_organizer_email
-          required: true
-          type: string
-        - in: path
-          name: url_event_orig_name
-          required: true
-          type: string
-      responses:
-        '200':
-          description: A successful response
-          schema:
-            $ref: '#/definitions/ModelsEmptyResponse'
-    put:
-      operationId: connectEDApi_qrSignInEvent
+    get:
+      operationId: connectEDApi_qrEvent
       parameters:
         - in: path
           name: e_organizer_email
@@ -883,6 +906,15 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsEmptyResponse'
+  /connected/v1/teams/suggested:
+    get:
+      operationId: connectEDApi_getSuggestedTeam
+      parameters: []
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/ModelsGetProfileSuggestedTeams'
   '/connected/v1/teams/{team_name}/approve':
     put:
       operationId: connectEDApi_teamApprovePending

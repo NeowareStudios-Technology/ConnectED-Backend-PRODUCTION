@@ -67,6 +67,7 @@ from models import REGISTER_EVENT_REQUEST
 from models import GetProfileEvents
 from models import GetEventsInRadiusByDateResponse
 from models import GetProfileTeamsResponse
+from models import GetProfileSuggestedTeams
 
 import googlemaps
 
@@ -118,7 +119,7 @@ class connectEDApi(remote.Service):
     else:
       profile_entity = ndb.Key(Profile, user.email()).get()
       profile_entity.created_teams.append(getattr(request, 't_name'))
-      profile_entity.created_teams_id.append(url_safe_name)
+      profile_entity.created_teams_ids.append(url_safe_name)
 
       name_split = getattr(request, 't_name')
       name_split =name_split.split()
@@ -132,8 +133,20 @@ class connectEDApi(remote.Service):
         t_photo = getattr(request, 't_photo'),
         t_organizer = profile_entity.email,
         #t_capacity = getattr(request, 't_capacity'),
-        t_privacy = getattr(request, 't_privacy')
+        t_privacy = getattr(request, 't_privacy'),
+        t_city = getattr(request,'t_city'),
+        t_state = getattr(request, 't_state')
       )
+
+      #get lat and lon for team
+      geocode_result = gmaps.geocode(getattr(team, 't_city')+','+getattr(team,'t_state'))
+      if not geocode_result:
+        raise endpoints.BadRequestException('Event address could not be located')
+      this_location = geocode_result[0]
+      this_lat = this_location['geometry']['location']['lat']
+      this_lon = this_location['geometry']['location']['lng']
+
+      setattr(team, 't_location', ndb.GeoPt(this_lat, this_lon))
 
       team_roster = T_Roster(parent = t_key)
       team_roster.t_name = team.t_name
@@ -166,7 +179,9 @@ class connectEDApi(remote.Service):
       t_members = team_entity.t_members,
       t_pending_members = team_entity.t_pending_members,
       t_privacy = team_entity.t_privacy,
-      funds_raised = team_entity.funds_raised
+      funds_raised = team_entity.funds_raised,
+      t_city = team_entity.t_city,
+      t_state = team_entity.t_state
     )
     temp_t_desc = team_entity.t_desc
     if temp_t_desc:
@@ -181,6 +196,88 @@ class connectEDApi(remote.Service):
       setattr(response, 't_capacity', temp_t_cap)
     """
     return response
+
+  #***HELPER FUNCTION: GET SUGGESTED TEAMS***
+  #Description: retrieve a list of suggested team names and ids
+  #Params: empty
+  #Returns: list of suggested teams and ids
+  #Called by: getSuggestedTeam() endpoint
+  def _viewSuggestedTeams(self, request,user):
+    #get user profile entity
+    user_email = user.email()
+    profile_entity = ndb.Key(Profile, user_email).get()
+    if not profile_entity:
+      raise endpoints.NotFoundException('Profile not found')
+    #get user location
+    user_lat = profile_entity.location.lat
+    user_lon = profile_entity.location.lon
+
+    #get 50 teams
+    #implement filter by state here when more users happen
+    team_query = Team.query()
+    teams = team_query.fetch(50)
+
+    # ONLY 25 ORIGINS OR DESTINATIONS PER DISTANCE MATRIX REQUEST
+    num_teams = len(teams)
+    matrixed_teams = 0
+    total_matrixed_teams = 0
+    large_result_list = []
+    origins = []
+    origins.append([user_lat, user_lon])
+    destinations = []
+
+    for team in teams:
+      if matrixed_teams < 25 and total_matrixed_teams != num_teams-1:
+        destinations.append([team.t_location.lat, team.t_location.lon])
+        matrixed_teams += 1
+        total_matrixed_teams += 1
+      else:
+        destinations.append([team.t_location.lat, team.t_location.lon])
+        matrixed_teams += 1
+        total_matrixed_teams += 1
+
+        matrix_result = gmaps.distance_matrix(origins, destinations, mode="driving",
+                                            language="en",
+                                            units="imperial")
+        this_result = matrix_result['rows'][0]['elements']
+        for result in this_result:
+          large_result_list.append(result)
+        matrixed_teams = 0
+        destinations = []
+        this_result = []
+      
+    response = GetProfileSuggestedTeams()
+    team_index_list = []
+    distance_list = []
+    count=0
+    response_count = 0
+    #get up to 20 events that are in radius set by user
+    for result in large_result_list:
+      if response_count >= 20:
+        break
+      if result['distance']['value'] <= (profile_entity.search_rad * 1609.34):
+        #vent_list.append(events[count])
+        team_index_list.append(count)
+        distance_list.append(result['distance']['value'])
+        response_count += 1
+      count += 1
+    #sort events in user radius
+    response_dict = dict(zip(team_index_list, distance_list))
+    sorted_index_list = []
+    debug_list = []
+    for key, value in sorted(response_dict.iteritems(), key=lambda (k,v): (v,k)):
+      sorted_index_list.append(key)
+      debug_list.append(value)
+
+    for team_index in sorted_index_list:
+      response.team_names.append(teams[team_index].t_name)
+      response.team_ids.append(teams[team_index].t_orig_name)
+    
+    return response
+
+
+    
+
   
   #***HELPER FUNCTION: GET TEAM ROSTER***
   #Description: retrieve info for a specified team roster
@@ -252,6 +349,14 @@ class connectEDApi(remote.Service):
     privacy = getattr(request,'t_privacy')
     if privacy:
       team_entity.t_privacy = privacy
+
+    state = getattr(request,'t_state')
+    if state:
+      team_entity.t_state = state
+
+    city = getattr(request,'t_city')
+    if city:
+      team_entity.t_city = city
 
       #if changing to open (public) event, convert all pending
       #attendees to attendees as long as there is capacity
@@ -1481,7 +1586,7 @@ class connectEDApi(remote.Service):
   #Returns: name of event signed up for
   #Called by: qrSignInEvent() endpoint
   @ndb.transactional(xg=True)
-  def _qrInEvent(self, request, user):
+  def _qrEvent(self, request, user):
     #user user profile entity
     user_email = user.email()
     profile_entity = ndb.Key(Profile, user_email).get()
@@ -1506,36 +1611,98 @@ class connectEDApi(remote.Service):
     check = 0
     check2 = 0
     check3 = 0
+    #check if user has registered
     for attendee in roster_entity.attendees:
       if attendee == user_email:
         check = 1
+    #check if user has sign in
     for attendee2 in roster_entity.signed_in_attendees:
       if attendee2 == user_email:
         check2 = 1
+    #check if user has signed out
     for attendee3 in roster_entity.signed_out_attendees:
       if attendee3 == user_email:
         check3 = 1
-        roster_entity.signed_out_attendees.remove(attendee3)
+
+    #if the user has not registered for the event, raise error
+    ##########################################################
     if check == 0:
       raise endpoints.BadRequestException('User must be registered for event to sign in')
-    if check2 == 1:
-      raise endpoints.BadRequestException('User already signed in')
-    now = datetime.now()
-    if check3 == 0:
-      roster_entity.total_sign_in += 1
-    roster_entity.signed_in_attendees.append(user_email)
-    roster_entity.sign_in_times.append(now)
-
-    #save qr sign in time to db to calculate hours when signed out
-    sign_in_time = datetime.now()
-    profile_entity.qr_in_dt = sign_in_time
-
-    #save event id in attended events list in Profile entity
-    profile_entity.attended_events.append(e_id)
-    roster_entity.put()
-    profile_entity.put()
-    return EmptyResponse()
     
+    #if the user has already signed into the event, sign them out
+    #############################################################
+    elif check2 == 1:
+      now = datetime.now()
+      roster_entity.signed_in_attendees.remove(user_email)
+      roster_entity.signed_out_attendees.append(user_email)
+      roster_entity.sign_out_times.append(now)
+
+      #calculate difference between sign in time and sign out time
+      sign_out_time = datetime.now()
+      sign_in_time = profile_entity.qr_in_dt
+      elapsed = sign_out_time - sign_in_time
+      hours=0
+      if elapsed.days == 0:
+        hours = float(elapsed.seconds)/3600
+        hours = round(hours,2)
+        if profile_entity.hours:
+          profile_entity.hours += hours
+        else:
+          profile_entity.hours = hours
+      
+      #add hours to total event hours
+      roster_entity.total_hours += hours
+      #remove old sign in time
+      profile_entity.qr_in_dt = None
+
+      #save event id in attended events list in Profile entity
+      if e_id not in profile_entity.completed_events:
+        profile_entity.completed_events.append(e_id)
+        profile_entity.attended_events.remove(e_id)
+        profile_entity.event_hours.append(hours)
+      else:
+        index = profile_entity.completed_events.index(e_id)
+        profile_entity.event_hours[index] += hours
+
+      roster_entity.put()
+      profile_entity.put()
+    
+    #if the user has already signed out of the event, create new sign in
+    ####################################################################
+    elif check3 ==1:
+      now = datetime.now()
+      roster_entity.signed_in_attendees.append(user_email)
+      roster_entity.signed_out_attendees.remove(user_email)
+      roster_entity.sign_in_times.append(now)
+
+      #save qr sign in time to db to calculate hours when signed out
+      sign_in_time = datetime.now()
+      profile_entity.qr_in_dt = sign_in_time
+
+      #save event id in attended events list in Profile entity
+      profile_entity.attended_events.append(e_id)
+      roster_entity.put()
+      profile_entity.put()
+    
+    #if this is the first time the user signed in to event, create new sign in and increment sign in number
+    ####################################################################
+    else:
+      roster_entity.total_sign_in += 1
+      now = datetime.now()
+      roster_entity.signed_in_attendees.append(user_email)
+      roster_entity.sign_in_times.append(now)
+
+      #save qr sign in time to db to calculate hours when signed out
+      sign_in_time = datetime.now()
+      profile_entity.qr_in_dt = sign_in_time
+
+      #save event id in attended events list in Profile entity
+      profile_entity.attended_events.append(e_id)
+      roster_entity.put()
+      profile_entity.put()
+
+    return EmptyResponse()
+  ''' 
   #***HELPER FUNCTION: QR SIGN OUT FROM EVENT FOR USER***
   #Description: sign user out of active event (to be called after qr scanning on front end)
   #Params: request- DELETE request sent to qrSignOutEvent() endpoint (user email, event ID)
@@ -1614,7 +1781,7 @@ class connectEDApi(remote.Service):
     profile_entity.put()
 
     return EmptyResponse()
-
+  '''
   #***HELPER FUNCTION: APPROVE PENDING EVENT ATTENDEES***
   #Description: approve pending event attendees (only event organizer)
   #Params: request- PUT request sent to eventApprovePending() endpoint (url safe original event name, event creator email, list of approvals)
@@ -1663,6 +1830,11 @@ class connectEDApi(remote.Service):
           if event_entity.num_attendees < event_entity.capacity:
             attendee_entity = ndb.Key(Profile, attendee).get()
             if attendee_entity:
+              #get index of attendee in pending list
+              index = e_roster_entity.pending_attendees.index(attendee)
+              #get team associated with attendee and pop from pending list
+              this_team = e_roster_entity.pending_teams.pop(index)
+              e_roster_entity.teams.append(this_team)
               e_roster_entity.pending_attendees.remove(attendee)
               e_roster_entity.attendees.append(attendee)
               event_entity.num_pending_attendees-=1
@@ -1812,6 +1984,8 @@ class connectEDApi(remote.Service):
   #Called by: getEventsInRadius() endpoint
   def _getRadiusEvents(self, request,user):
     prof_entity = ndb.Key(Profile, user.email()).get()
+    if not prof_entity:
+      raise endpoints.NotFoundException('Profile not found')
     user_lat = prof_entity.location.lat
     user_lon = prof_entity.location.lon
 
@@ -2372,6 +2546,17 @@ class connectEDApi(remote.Service):
   def getTeamRoster(self, request):
     self._authenticateUser()
     return self._viewTeamRoster(request)
+
+  #****ENDPOINT: GET SUGGESTED TEAMS***
+  #-accepts: empty request
+  #-returns: all team info
+  @endpoints.method(EMPTY_REQUEST, GetProfileSuggestedTeams, 
+  path='teams/suggested', http_method='GET', name='getSuggestedTeams')
+  def getSuggestedTeam(self, request):
+    user = self._authenticateUser()
+    return self._viewSuggestedTeams(request, user)
+
+
   """
   #****ENDPOINT: REGISTER TEAM FOR EVENT***
   #-accepts: event name to sign up for, event organizer email
@@ -2427,15 +2612,15 @@ class connectEDApi(remote.Service):
     user = self._authenticateUser()
     return self._signOutTeam(request, user)
 
-  #****ENDPOINT: QR EVENT USER SIGN IN***
+  #****ENDPOINT: QR EVENT IN OR OUT***
   #-accepts: event name to qr sign up for, event organizer email
   #-returns: event qr signed in to
   @endpoints.method(QR_SIGNIN_REQUEST, EmptyResponse,
-  path='events/{e_organizer_email}/{url_event_orig_name}/qr', http_method='PUT', name='qrSignInEvent')
-  def qrSignInEvent(self, request):
+  path='events/{e_organizer_email}/{url_event_orig_name}/qr', http_method='GET', name='qrEvent')
+  def qrEvent(self, request):
     user = self._authenticateUser()
-    return self._qrInEvent(request, user)
-
+    return self._qrEvent(request, user)
+  '''
   #****ENDPOINT: QR EVENT USER SIGN OUT***
   #-accepts: event name to qr sign out of for, event organizer email
   #-returns: event qr signed in to
@@ -2444,7 +2629,7 @@ class connectEDApi(remote.Service):
   def qrSignOutEvent(self, request):
     user = self._authenticateUser()
     return self._qrOutEvent(request, user)
-
+  '''
   #****ENDPOINT: EVENT SEARCH***
   #-accepts: keyword/event name to search events for
   #-returns: list of names and list of event ids
