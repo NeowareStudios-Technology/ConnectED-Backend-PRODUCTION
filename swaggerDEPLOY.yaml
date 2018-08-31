@@ -672,8 +672,6 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsEmptyResponse'
-      security:
-        - api_key: []
     put:
       operationId: connectEDApi_editEvent
       parameters:
@@ -686,8 +684,6 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsEmptyResponse'
-      security:
-        - api_key: []
   /connected/v1/events/prefill:
     get:
       operationId: connectEDApi_getEventsInRadius
@@ -697,8 +693,6 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsGetEventsInRadiusResponse'
-      security:
-        - api_key: []
   /connected/v1/events/prefill/dates:
     get:
       operationId: connectEDApi_getEventsInRadiusByDate
@@ -708,8 +702,6 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsGetEventsInRadiusByDateResponse'
-      security:
-        - api_key: []
   /connected/v1/events/search:
     get:
       operationId: connectEDApi_searchEvent
@@ -723,8 +715,6 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsEventSearchResponse'
-      security:
-        - api_key: []
   '/connected/v1/events/{e_organizer_email}/{url_event_orig_name}':
     get:
       operationId: connectEDApi_getEvent
@@ -742,8 +732,6 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsEventGetResponse'
-      security:
-        - api_key: []
   '/connected/v1/events/{e_organizer_email}/{url_event_orig_name}/approve':
     put:
       operationId: connectEDApi_eventApprovePending
@@ -765,8 +753,6 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsEmptyResponse'
-      security:
-        - api_key: []
   '/connected/v1/events/{e_organizer_email}/{url_event_orig_name}/qr':
     get:
       operationId: connectEDApi_qrEvent
@@ -784,8 +770,6 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsGenericOneLiner'
-      security:
-        - api_key: []
   '/connected/v1/events/{e_organizer_email}/{url_event_orig_name}/registration':
     delete:
       operationId: connectEDApi_deregisterForEvent
@@ -803,8 +787,6 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsEmptyResponse'
-      security:
-        - api_key: []
     put:
       operationId: connectEDApi_RegisterForEvent
       parameters:
@@ -825,8 +807,6 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsEmptyResponse'
-      security:
-        - api_key: []
   '/connected/v1/events/{e_organizer_email}/{url_event_orig_name}/updates':
     get:
       operationId: connectEDApi_getEventUpdates
@@ -844,8 +824,6 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsEventUpdatesGetResponse'
-      security:
-        - api_key: []
   '/connected/v1/events/{url_event_orig_name}':
     delete:
       operationId: connectEDApi_deleteEvent
@@ -862,8 +840,6 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsEmptyResponse'
-      security:
-        - api_key: []
   '/connected/v1/events/{url_event_orig_name}/leaders':
     delete:
       operationId: connectEDApi_deleteEventLeaders
@@ -883,8 +859,6 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsEmptyResponse'
-      security:
-        - api_key: []
     put:
       operationId: connectEDApi_addEventLeaders
       parameters:
@@ -901,8 +875,6 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsEmptyResponse'
-      security:
-        - api_key: []
   /connected/v1/profiles:
     delete:
       operationId: connectEDApi_deleteProfile
@@ -912,8 +884,6 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsEmptyResponse'
-      security:
-        - api_key: []
     post:
       operationId: connectEDApi_createProfile
       parameters:
@@ -926,8 +896,6 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsEmptyResponse'
-      security:
-        - api_key: []
     put:
       operationId: connectEDApi_editProfile
       parameters:
@@ -940,8 +908,6 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsEmptyResponse'
-      security:
-        - api_key: []
   /connected/v1/profiles/search:
     get:
       operationId: connectEDApi_searchProfile
@@ -955,8 +921,6 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsProfileSearchResponse'
-      security:
-        - api_key: []
   '/connected/v1/profiles/{email_to_get}':
     get:
       operationId: connectEDApi_getProfile
@@ -970,8 +934,6 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsProfileGetResponse'
-      security:
-        - api_key: []
   '/connected/v1/profiles/{email_to_get}/events':
     get:
       operationId: connectEDApi_getProfileEvents
@@ -985,8 +947,6 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsGetProfileEvents'
-      security:
-        - api_key: []
   '/connected/v1/profiles/{email_to_get}/teams':
     get:
       operationId: connectEDApi_getProfileTeams
@@ -1000,8 +960,6 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsGetProfileTeamsResponse'
-      security:
-        - api_key: []
   /connected/v1/teams:
     post:
       operationId: connectEDApi_createTeam
@@ -1015,8 +973,6 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsEmptyResponse'
-      security:
-        - api_key: []
     put:
       operationId: connectEDApi_editTeam
       parameters:
@@ -1029,8 +985,6 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsEmptyResponse'
-      security:
-        - api_key: []
   /connected/v1/teams/search:
     get:
       operationId: connectEDApi_searchTeam
@@ -1044,8 +998,6 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsTeamSearchResponse'
-      security:
-        - api_key: []
   /connected/v1/teams/suggested:
     get:
       operationId: connectEDApi_getSuggestedTeam
@@ -1055,8 +1007,6 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsGetProfileSuggestedTeams'
-      security:
-        - api_key: []
   /connected/v1/teams/top:
     get:
       operationId: connectEDApi_getTopTeams
@@ -1066,8 +1016,6 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsTopTeamsResponse'
-      security:
-        - api_key: []
   '/connected/v1/teams/{team_name}/approve':
     put:
       operationId: connectEDApi_teamApprovePending
@@ -1085,8 +1033,6 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsEmptyResponse'
-      security:
-        - api_key: []
   '/connected/v1/teams/{url_team_orig_name}':
     delete:
       operationId: connectEDApi_deleteTeam
@@ -1100,8 +1046,6 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsEmptyResponse'
-      security:
-        - api_key: []
     get:
       operationId: connectEDApi_getTeam
       parameters:
@@ -1114,8 +1058,6 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsTeamGetResponse'
-      security:
-        - api_key: []
   '/connected/v1/teams/{url_team_orig_name}/history':
     get:
       operationId: connectEDApi_getTeamHistory
@@ -1129,8 +1071,6 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsTeamHistoryGetResponse'
-      security:
-        - api_key: []
   '/connected/v1/teams/{url_team_orig_name}/registration':
     delete:
       operationId: connectEDApi_deregisterForTeam
@@ -1144,8 +1084,6 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsEmptyResponse'
-      security:
-        - api_key: []
     get:
       operationId: connectEDApi_RegisterForTeam
       parameters:
@@ -1158,17 +1096,11 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsEmptyResponse'
-      security:
-        - api_key: []
 produces:
   - application/json
 schemes:
   - https
 securityDefinitions:
-  api_key:
-    in: query
-    name: key
-    type: apiKey
   firebase:
     authorizationUrl: ''
     flow: implicit

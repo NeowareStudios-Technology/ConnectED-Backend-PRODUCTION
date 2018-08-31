@@ -70,10 +70,14 @@ env_variables:
   # 'gcloud endpoints services deploy swagger.json' command.
   ENDPOINTS_SERVICE_NAME: connected-dev-214119.appspot.com
 <<<<<<< HEAD
+<<<<<<< HEAD
   ENDPOINTS_SERVICE_VERSION: 2018-08-31r11
 =======
   ENDPOINTS_SERVICE_VERSION: 2018-08-31r8
 >>>>>>> parent of f2a39e7... before API key
+=======
+  ENDPOINTS_SERVICE_VERSION: 2018-08-31r10
+>>>>>>> parent of e300c9f... added api key requirement
 
 
 
