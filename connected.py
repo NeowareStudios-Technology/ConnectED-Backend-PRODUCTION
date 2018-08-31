@@ -48,10 +48,10 @@ from models import T_Roster
 from models import TEAM_DEL_REQUEST
 from models import TeamEditForm
 from models import TeamGetResponse
-from models import EVENT_SEARCH_REQUEST
+from models import SEARCH_REQUEST
 from models import EventSearchResponse
 from models import EventRosterGetResponse
-from models import TeamRosterGetResponse
+#from models import TeamRosterGetResponse
 from models import E_Updates
 from models import EventUpdatesGetResponse
 #from models import TEAM_EVENT_REG_REQUEST
@@ -68,6 +68,12 @@ from models import GetProfileEvents
 from models import GetEventsInRadiusByDateResponse
 from models import GetProfileTeamsResponse
 from models import GetProfileSuggestedTeams
+from models import GenericOneLiner
+from models import Top_Teams
+from models import TopTeamsResponse
+from models import ProfileSearchResponse
+from models import TeamSearchResponse
+from models import TeamHistoryGetResponse
 
 import googlemaps
 
@@ -164,7 +170,7 @@ class connectEDApi(remote.Service):
   #Params: request- GET request url portion sent to getTeam() endpoint (url safe original team name)
   #Returns: specified team info
   #Called by: getTeam() endpoint
-  def _viewTeam(self, request):
+  def _viewTeam(self, request, user):
     decoded_team_name = request.url_team_orig_name
     decoded_team_name = decoded_team_name.replace(" ", "+")
     #decoded_team_name = urllib.unquote(str(decoded_team_name)).decode("utf-8")
@@ -172,16 +178,29 @@ class connectEDApi(remote.Service):
     if not team_entity:
       raise endpoints.NotFoundException('Could not find team')
 
+    team_roster_entity = T_Roster.query(ancestor = team_entity.key).get()
+    if not team_roster_entity:
+      raise endpoints.NotFoundException('Could not find team roster')
+
+    register_flag = 0
+    if user.email() in team_roster_entity.members:
+      register_flag = 1
+
     response = TeamGetResponse(
       t_name = team_entity.t_name,
       t_orig_name = team_entity.t_orig_name,
       t_organizer = team_entity.t_organizer,
-      t_members = team_entity.t_members,
-      t_pending_members = team_entity.t_pending_members,
+      t_member_num = team_entity.t_members,
+      t_pending_member_num = team_entity.t_pending_members,
       t_privacy = team_entity.t_privacy,
       funds_raised = team_entity.funds_raised,
       t_city = team_entity.t_city,
-      t_state = team_entity.t_state
+      t_state = team_entity.t_state,
+      t_hours = team_entity.t_hours,
+      t_leaders = team_roster_entity.leaders,
+      t_members = team_roster_entity.members,
+      t_pending_members = team_roster_entity.pending_members,
+      is_registered = register_flag
     )
     temp_t_desc = team_entity.t_desc
     if temp_t_desc:
@@ -195,6 +214,39 @@ class connectEDApi(remote.Service):
     if temp_t_cap:
       setattr(response, 't_capacity', temp_t_cap)
     """
+    return response
+
+  
+  #***HELPER FUNCTION: GET TEAM HISTORY***
+  #Description: retrieve hstory for a specified team
+  #Params: request- GET request url portion sent to getTeamHistory() endpoint (url safe original team name)
+  #Returns: specified team history info
+  #Called by: getTeamHistory() endpoint
+  def _viewTeamHistory(self, request):
+    past_events = EventHistory.query(EventHistory.teams == request.url_team_orig_name).fetch()
+    
+    response = TeamHistoryGetResponse()
+    for event in past_events:
+      response.event_ids.append(event.e_organizer+"_"+event.e_orig_title)
+      response.event_names.append(event.e_title)
+    
+    return response
+
+
+
+  #***HELPER FUNCTION: GET TOP TEAMS***
+  #Description: retrieve a list of top team names and ids and hours
+  #Params: empty
+  #Returns: list of top team names, ids, hours
+  #Called by: getTopTeams() endpoint
+  def _viewTopTeams(self, request):
+    top_teams_entity = ndb.Key(Top_Teams, 'topteams').get()
+    response = TopTeamsResponse(
+      top_team_names = top_teams_entity.top_team_names,
+      top_team_ids = top_teams_entity.top_team_ids,
+      top_team_hours = top_teams_entity.top_team_hours
+    )
+
     return response
 
   #***HELPER FUNCTION: GET SUGGESTED TEAMS***
@@ -278,7 +330,7 @@ class connectEDApi(remote.Service):
 
     
 
-  
+  '''
   #***HELPER FUNCTION: GET TEAM ROSTER***
   #Description: retrieve info for a specified team roster
   #Params: request- GET request url portion sent to getTeamRoster() endpoint (url safe original team name)
@@ -298,7 +350,7 @@ class connectEDApi(remote.Service):
     )
 
     return response
-
+  '''
   
   
   #***HELPER FUNCTION: EDIT TEAM***
@@ -403,7 +455,10 @@ class connectEDApi(remote.Service):
         roster_entity.key.delete()
       
       #remove team from profile created teams property
-      profile_entity.created_teams.remove(decoded_team_name)
+      if decoded_team_name in profile_entity.created_teams_ids:
+        profile_entity.created_teams.remove(request.url_team_orig_name)
+        profile_entity.created_teams_ids.remove(decoded_team_name)
+
       profile_entity.put()
       #delete the event
       team_entity.key.delete()
@@ -476,7 +531,6 @@ class connectEDApi(remote.Service):
     team_entity.put()
     roster_entity.put()
     return EmptyResponse()
-
 
   #***HELPER FUNCTION: DEREGISTER LOGGED IN USER FROM TEAM***
   #Description: deregisters user for team
@@ -657,6 +711,7 @@ class connectEDApi(remote.Service):
       education = profile_entity.education,
       skills = profile_entity.skills,
       photo = profile_entity.photo,
+      hours = profile_entity.hours
     )
     return response
 
@@ -814,6 +869,15 @@ class connectEDApi(remote.Service):
     pic = getattr(request,'photo')
     if pic:
       profile_entity.photo = pic
+
+    env = getattr(request, 'env_pref')
+    if env:
+      profile_entity.env_pref = env
+    
+    rad = getattr(request, 'search_rad')
+    if rad:
+      profile_entity.search_rad = rad
+
     
     profile_entity.put()
     schedule_entity.put()
@@ -944,13 +1008,21 @@ class connectEDApi(remote.Service):
   #Params: request- GET request url portion sent to getEvent() endpoint (url safe original event name)
   #Returns: specified event info
   #Called by: getEvent() endpoint
-  def _viewEvent(self, request):
+  def _viewEvent(self, request, user):
     decoded_name = request.url_event_orig_name
     decoded_name = decoded_name.replace(" ", "+")
     event_id = request.e_organizer_email + '_' + decoded_name
     event_entity = ndb.Key(Event, event_id).get()
     if not event_entity:
       raise endpoints.NotFoundException('Could not find event')
+
+    event_roster_entity = E_Roster.query(ancestor = event_entity.key).get()
+    if not event_roster_entity:
+      raise endpoints.NotFoundException('Could not find event roster')
+    
+    register_flag = 0
+    if user.email() in event_roster_entity.attendees:
+      register_flag = 1
 
     #create response object
     response = EventGetResponse(
@@ -974,7 +1046,14 @@ class connectEDApi(remote.Service):
       qr = event_entity.qr,
       num_attendees = event_entity.num_attendees,
       funds_raised = event_entity.funds_raised,
-      num_pending_attendees = event_entity.num_pending_attendees
+      num_pending_attendees = event_entity.num_pending_attendees,
+      teams = event_roster_entity.teams,
+      attendees = event_roster_entity.attendees,
+      pending_attendees = event_roster_entity.pending_attendees,
+      signed_in_attendees = event_roster_entity.signed_in_attendees,
+      signed_out_attendees = event_roster_entity.signed_out_attendees,
+      leaders = event_roster_entity.leaders,
+      is_registered = register_flag
     )
 
     this_sched = getattr(event_entity, "sched")
@@ -991,7 +1070,7 @@ class connectEDApi(remote.Service):
       response.end.append(end_string)
 
     return response
-  
+  '''
   #***HELPER FUNCTION: GET EVENT ROSTER***
   #Description: retrieve info for a specified event roster
   #Params: request- GET request url portion sent to getEventRoster() endpoint (url safe original event name)
@@ -1023,7 +1102,7 @@ class connectEDApi(remote.Service):
 
     #return event roste info
     return response
-
+  '''
 
   #***HELPER FUNCTION: GET EVENT UPDATES***
   #Description: retrieve info for a specified event updates
@@ -1458,7 +1537,7 @@ class connectEDApi(remote.Service):
         roster_entity.pending_attendees.append(profile_entity.email)
         event_entity.num_pending_attendees += 1
       
-    #if team choice passed and exists, register team or pending team
+    #if team choice is passed and exists, register team or pending team
     team_exist_flag = 0
     team_name = ''
     if getattr(request, 'team'):
@@ -1624,6 +1703,7 @@ class connectEDApi(remote.Service):
       if attendee3 == user_email:
         check3 = 1
 
+    return_string =''
     #if the user has not registered for the event, raise error
     ##########################################################
     if check == 0:
@@ -1645,11 +1725,29 @@ class connectEDApi(remote.Service):
       if elapsed.days == 0:
         hours = float(elapsed.seconds)/3600
         hours = round(hours,2)
-        if profile_entity.hours:
-          profile_entity.hours += hours
-        else:
-          profile_entity.hours = hours
-      
+        #if profile_entity.hours:
+        #  profile_entity.hours += hours
+        profile_entity.hours += hours
+        #get associated team (if user signed up with one) and add hours
+        user_index = roster_entity.attendees.index(profile_entity.email)
+        associated_team = roster_entity.teams[user_index]
+        associated_team = associated_team.replace(" ", "+")
+        team_entity = ndb.Key(Team, associated_team).get()
+        #if user was part of team, add hours to total and event hours
+        if team_entity:
+          team_entity.t_hours += hours
+          #if event is not already in team event history, put it there and add date and hours
+          if e_id not in team_entity.events_history:
+            team_entity.events_history.append(e_id)
+            team_entity.dates_history.append(sign_out_time)
+            team_entity.hours_history.append(hours)
+          #if event already in team history, only add hours
+          else:
+            event_index = team_entity.events_history.index(e_id)
+            team_entity.hours_history[event_index] += hours
+          team_entity.put()
+
+
       #add hours to total event hours
       roster_entity.total_hours += hours
       #remove old sign in time
@@ -1666,6 +1764,8 @@ class connectEDApi(remote.Service):
 
       roster_entity.put()
       profile_entity.put()
+
+      return_string = 'Signed out'
     
     #if the user has already signed out of the event, create new sign in
     ####################################################################
@@ -1683,6 +1783,8 @@ class connectEDApi(remote.Service):
       profile_entity.attended_events.append(e_id)
       roster_entity.put()
       profile_entity.put()
+
+      return_string = 'Signed in again'
     
     #if this is the first time the user signed in to event, create new sign in and increment sign in number
     ####################################################################
@@ -1701,7 +1803,9 @@ class connectEDApi(remote.Service):
       roster_entity.put()
       profile_entity.put()
 
-    return EmptyResponse()
+      return_string = 'Signed in'
+    return GenericOneLiner(response = return_string)
+
   ''' 
   #***HELPER FUNCTION: QR SIGN OUT FROM EVENT FOR USER***
   #Description: sign user out of active event (to be called after qr scanning on front end)
@@ -1991,7 +2095,12 @@ class connectEDApi(remote.Service):
 
     #get 100 events
     #implement filter by state here when more users happen
+    env_pref = prof_entity.env_pref
     event_query = Event.query()
+    if env_pref == 'o':
+      event_query = event_query.filter(Event.env.IN(['o', 'b']))
+    elif env_pref == 'i':
+      event_query = event_query.filter(Event.env.IN(['i', 'b']))
     events = event_query.fetch(100)
 
     # ONLY 25 ORIGINS OR DESTINATIONS PER DISTANCE MATRIX REQUEST
@@ -2239,7 +2348,131 @@ class connectEDApi(remote.Service):
       roster_entity.put()
 
     return EmptyResponse()
+
+  #***HELPER FUNCTION: SEARCH FOR PERSON BY NAME***
+  #Description: returns name, pic, and email of searched for profile
+  #Params: request- GET url query string sent to searchProfile() endpoint (search term)
+  #Returns: request- list of matching profile names, pics, and emails
+  #Called by: searchEvent() endpoint
+  def _searchProfile(self, request):
+    #get list of separated search terms
+    search_terms = request.search_term
+    search_terms = search_terms.split()
+
+    if len(search_terms) > 2:
+      raise endpoints.BadRequestException("Cannot have more than 2 search terms")
   
+    #make list to hold all searched for profile entities
+    large_profile_list = []
+    list_count = 0
+
+    #make response object
+    response = ProfileSearchResponse()
+
+    #if there are 2 search terms
+    if len(search_terms) == 2:
+      #search for profiles that match completely if there are 2 search terms
+      profile_fullname_query = Profile.query()
+      profile_fullname_query = profile_fullname_query.filter(Profile.first_name == search_terms[0])
+      profile_fullname_query = profile_fullname_query.filter(Profile.last_name == search_terms[1])
+      profile_matches_full = profile_fullname_query.fetch(15)
+
+      #add all full matches to the large list
+      large_profile_list += profile_matches_full 
+      list_count = len(profile_matches_full)
+
+      #if there are 15 full matches, end the function and return
+      if list_count == 15:
+        for profile in large_profile_list:
+          response.name.append(profile.first_name+' '+profile.last_name)
+          response.pic.append(profile.photo)
+          response.email.append(profile.email)
+        return response
+      
+      #search for profiles that match first name
+      profile_firstname_query = Profile.query()
+      profile_firstname_query = profile_firstname_query.filter(Profile.first_name == search_terms[0])
+      profile_matches_first = profile_firstname_query.fetch(15)
+      #for each profile that matches first name, add to large list
+      for profile in profile_matches_first:
+        #if list is at 15, return from function
+        if list_count == 15:
+          for profile in large_profile_list:
+            response.name.append(profile.first_name+' '+profile.last_name)
+            response.pic.append(profile.photo)
+            response.email.append(profile.email)
+          return response
+        if profile not in large_profile_list:
+          large_profile_list.append(profile)
+          list_count = len(large_profile_list)
+      
+      #search for profiles that match last name
+      profile_lastname_query = Profile.query()
+      profile_lastname_query = profile_lastname_query.filter(Profile.last_name == search_terms[1])
+      profile_matches_last = profile_lastname_query.fetch(15)
+      #for each profile that matches last name, add to list
+      for profile in profile_matches_last:
+        #if list is at 15, return from function
+        if list_count == 15:
+          for profile in large_profile_list:
+            response.name.append(profile.first_name+' '+profile.last_name)
+            response.pic.append(profile.photo)
+            response.email.append(profile.email)
+          return response
+        if profile not in large_profile_list:
+          large_profile_list.append(profile)
+          list_count = len(large_profile_list)
+      
+      #if list is still not at 15, return from function
+      for profile in large_profile_list:
+        response.name.append(profile.first_name+' '+profile.last_name)
+        response.pic.append(profile.photo)
+        response.email.append(profile.email)
+
+    else:
+      #search for profiles that match first name
+      profile_firstname_query = Profile.query()
+      profile_firstname_query = profile_firstname_query.filter(Profile.first_name == search_terms[0])
+      profile_matches_first = profile_firstname_query.fetch(15)
+      #for each profile that matches first name, add to large list
+      for profile in profile_matches_first:
+        #if list is at 15, return from function
+        if list_count == 15:
+          for profile in large_profile_list:
+            response.name.append(profile.first_name+' '+profile.last_name)
+            response.pic.append(profile.photo)
+            response.email.append(profile.email)
+          return response
+        if profile not in large_profile_list:
+          large_profile_list.append(profile)
+          list_count = len(large_profile_list)
+      
+      #search for profiles that match last name
+      profile_lastname_query = Profile.query()
+      profile_lastname_query = profile_lastname_query.filter(Profile.last_name == search_terms[0])
+      profile_matches_last = profile_lastname_query.fetch(15)
+      #for each profile that matches last name, add to list
+      for profile in profile_matches_last:
+        #if list is at 15, return from function
+        if list_count == 15:
+          for profile in large_profile_list:
+            response.name.append(profile.first_name+' '+profile.last_name)
+            response.pic.append(profile.photo)
+            response.email.append(profile.email)
+          return response
+        if profile not in large_profile_list:
+          large_profile_list.append(profile)
+          list_count = len(large_profile_list)
+      
+      #if list is still not at 15, return from function
+      for profile in large_profile_list:
+        response.name.append(profile.first_name+' '+profile.last_name)
+        response.pic.append(profile.photo)
+        response.email.append(profile.email)
+      
+    return response
+      
+    
   #***HELPER FUNCTION: SEARCH FOR EVENTS BY INTEREST/SKILL KEYWORD OR EVENT TITLE***
   #Description: searches for (within user radius) events with keyword in title (adds up to 10) then searches for events with
   #             keyword in interests or skills tags (adds up to 10 more) and returns list of titles and ids
@@ -2345,14 +2578,161 @@ class connectEDApi(remote.Service):
     final_num_events = len(new_distance_list)
     final_count = 0
     for x in range(final_num_events):
-      if final_count >= 20:
+      if final_count >= 10: #change this to change number of returned results
         break
       response.event_titles.append(large_event_list[sorted_index_list[x]].e_title)
-      response.event_ids.append(large_event_list[sorted_index_list[x]].e_organizer + '_' +large_event_list[sorted_index_list[x]].e_title)
+      response.event_ids.append(large_event_list[sorted_index_list[x]].e_organizer + '_' + large_event_list[sorted_index_list[x]].e_title.replace(" ", "+"))
+      response.event_pics.append(large_event_list[sorted_index_list[x]].e_photo)
+      now = datetime.now()
+      date_check = 0
+      for this_day in large_event_list[sorted_index_list[x]].sched:
+        this_date = this_day.date_end
+        if now < this_date:
+          response.event_dates.append(this_date.strftime('%m/%d/%Y'))
+          date_check=1
+          break
+      if date_check == 0:
+        response.event_dates.append('-')
       response.distances.append(new_distance_list[x] / 1609.34)
       final_count += 1
     
     return response
+
+
+  #***HELPER FUNCTION: SEARCH FOR TEAM***
+  #Description: returns name, pic, distance, id of searched for team
+  #Params: request- GET url query string sent to searchProfile() endpoint (search term)
+  #Returns: request- list of matching team names, pics, distance, and 
+  #Called by: searchEvent() endpoint
+  def _searchTeam(self, request, user):
+    #get user profile (for telling distance)
+    profile_entity = ndb.Key(Profile, user.email()).get()
+    if not profile_entity:
+      raise endpoints.UnauthorizedException('Could not find profile')
+    user_lat = profile_entity.location.lat
+    user_lon = profile_entity.location.lon
+    #get list of separated search terms
+    search_term = request.search_term
+    search_terms = search_term.split()
+    search_term = search_term.replace(" ", "+")
+
+    if len(search_terms) > 2:
+      raise endpoints.BadRequestException("Cannot have more than 5 search terms")
+
+    #declare response 
+    response = TeamSearchResponse()
+
+    #declare holding list
+    large_team_list = []
+    list_count = 0
+
+    #query for fully matching team
+    full_match = ndb.Key(Team, search_term).get()
+    if full_match:
+      large_team_list.append(full_match)
+      '''
+      #get distance for fully matching team
+      origins = []
+      destinations = []
+      origins.append([user_lat, user_lon])
+      destinations.append([full_match.t_location.lat, full_match.t_location.lon])
+      matrix_result = gmaps.distance_matrix(origins, destinations, mode="driving",
+                                            language="en",
+                                            units="imperial")
+      this_result = matrix_result['rows'][0]['elements']
+      distance = this_result[0]['distance']['value']
+      distance = distance/1609.34
+      distance = round(distance,2)
+
+      #fill out response
+      response.name.append(full_match.t_name)
+      response.t_id.append(full_match.t_orig_name)
+      response.pic.append(full_match.t_photo)
+      response.distance.append(distance)
+
+      return response
+      '''
+    
+    #for each search term
+    for term in search_terms:
+      #get up to 30 matching teams and save in large list
+      teams = Team.query(Team.t_name_index == term).fetch(30)
+      for this_team in teams:
+        if this_team not in large_team_list:
+          large_team_list.append(this_team)
+
+    # ONLY 25 ORIGINS OR DESTINATIONS PER DISTANCE MATRIX REQUEST
+    num_teams = len(large_team_list)
+    matrixed_teams = 0
+    total_matrixed_teams = 0
+    large_result_list = []
+    origins = []
+    origins.append([user_lat, user_lon])
+    destinations = []
+   
+    for team in large_team_list:
+      if matrixed_teams < 25 and total_matrixed_teams != num_teams-1:
+        destinations.append([team.t_location.lat, team.t_location.lon])
+        matrixed_teams += 1
+        total_matrixed_teams += 1
+      else:
+        destinations.append([team.t_location.lat, team.t_location.lon])
+        matrixed_teams += 1
+        total_matrixed_teams += 1
+
+        matrix_result = gmaps.distance_matrix(origins, destinations, mode="driving",
+                                            language="en",
+                                            units="imperial")
+        this_result = matrix_result['rows'][0]['elements']
+        for result in this_result:
+          large_result_list.append(result)
+        matrixed_teams = 0
+        destinations = []
+        this_result = []
+
+    team_index_list = []
+    distance_list = []
+    count=0
+    response_count = 0
+    #get up to 20 teams that are in radius set by user
+    for result in large_result_list: 
+      if response_count >= 20:
+        break
+      if result['distance']['value'] <= (profile_entity.search_rad * 1609.34):
+        #vent_list.append(teams[count])
+        team_index_list.append(count)
+        distance_list.append(result['distance']['value'])
+        response_count += 1
+      count += 1
+
+    #sort teams in user radius
+    response_dict = dict(zip(team_index_list, distance_list))
+    sorted_index_list = []
+    new_distance_list = []
+    for key, value in sorted(response_dict.iteritems(), key=lambda (k,v): (v,k)):
+      sorted_index_list.append(key)
+      new_distance_list.append(value)
+    
+    final_num_teams = len(new_distance_list)
+    final_count=0
+    for x in range(final_num_teams):
+      if final_count >= 10: #change this to change number of returned results
+        break
+      
+      #fill out response
+      response.name.append(large_team_list[sorted_index_list[x]].t_name)
+      response.t_id.append(large_team_list[sorted_index_list[x]].t_orig_name)
+      response.pic.append(large_team_list[sorted_index_list[x]].t_photo)
+      response.distance.append(new_distance_list[x] / 1609.34)
+    return response
+      
+
+    
+
+    
+
+
+    
 
 ##################################################################################
 ##################           ENDPOINT FUNCTIONS             ######################
@@ -2427,9 +2807,10 @@ class connectEDApi(remote.Service):
   @endpoints.method(EVENT_DEL_REQUEST, EventGetResponse, 
   path='events/{e_organizer_email}/{url_event_orig_name}', http_method='GET', name='getEvent')
   def getEvent(self, request):
-    self._authenticateUser()
-    return self._viewEvent(request)
+    user = self._authenticateUser()
+    return self._viewEvent(request, user)
 
+  '''
   #****ENDPOINT: GET EVENT ROSTER***
   #-accepts: event organizer email, original event name (url-safe)
   #-returns: event roster info
@@ -2438,6 +2819,7 @@ class connectEDApi(remote.Service):
   def getEventRoster(self, request):
     self._authenticateUser()
     return self._viewEventRoster(request)
+  '''
 
   #****ENDPOINT: GET EVENT UPDATES***
   #-accepts: event organizer email, original event name (url-safe)
@@ -2535,9 +2917,19 @@ class connectEDApi(remote.Service):
   @endpoints.method(TEAM_DEL_REQUEST, TeamGetResponse, 
   path='teams/{url_team_orig_name}', http_method='GET', name='getTeam')
   def getTeam(self, request):
-    self._authenticateUser()
-    return self._viewTeam(request)
+    user = self._authenticateUser()
+    return self._viewTeam(request,user)
 
+  #****ENDPOINT: GET TEAM***
+  #-accepts: original team name
+  #-returns: all team info
+  @endpoints.method(TEAM_DEL_REQUEST, TeamHistoryGetResponse, 
+  path='teams/{url_team_orig_name}/history', http_method='GET', name='getTeamHistory')
+  def getTeamHistory(self, request):
+    self._authenticateUser()
+    return self._viewTeamHistory(request)
+
+  '''
   #****ENDPOINT: GET TEAM ROSTER***
   #-accepts: original team name (url-safe)
   #-returns: team roster info
@@ -2546,6 +2938,7 @@ class connectEDApi(remote.Service):
   def getTeamRoster(self, request):
     self._authenticateUser()
     return self._viewTeamRoster(request)
+  '''
 
   #****ENDPOINT: GET SUGGESTED TEAMS***
   #-accepts: empty request
@@ -2555,6 +2948,15 @@ class connectEDApi(remote.Service):
   def getSuggestedTeam(self, request):
     user = self._authenticateUser()
     return self._viewSuggestedTeams(request, user)
+
+  #****ENDPOINT: GET TOP TEAMS***
+  #-accepts: empty request
+  #-returns: all team info
+  @endpoints.method(EMPTY_REQUEST, TopTeamsResponse, 
+  path='teams/top', http_method='GET', name='getTopTeams')
+  def getTopTeams(self, request):
+    self._authenticateUser()
+    return self._viewTopTeams(request)
 
 
   """
@@ -2598,7 +3000,7 @@ class connectEDApi(remote.Service):
   #-accepts: original team name to sign up for (team name is unique)
   #-returns: team name signed up for
   @endpoints.method(TEAM_DEL_REQUEST, EmptyResponse,
-  path='teams/{url_team_orig_name}/registration', http_method='PUT', name='registerForTeam')
+  path='teams/{url_team_orig_name}/registration', http_method='GET', name='registerForTeam')
   def RegisterForTeam(self, request):
     user = self._authenticateUser()
     return self._signUpTeam(request,user)
@@ -2615,7 +3017,7 @@ class connectEDApi(remote.Service):
   #****ENDPOINT: QR EVENT IN OR OUT***
   #-accepts: event name to qr sign up for, event organizer email
   #-returns: event qr signed in to
-  @endpoints.method(QR_SIGNIN_REQUEST, EmptyResponse,
+  @endpoints.method(QR_SIGNIN_REQUEST, GenericOneLiner,
   path='events/{e_organizer_email}/{url_event_orig_name}/qr', http_method='GET', name='qrEvent')
   def qrEvent(self, request):
     user = self._authenticateUser()
@@ -2633,11 +3035,29 @@ class connectEDApi(remote.Service):
   #****ENDPOINT: EVENT SEARCH***
   #-accepts: keyword/event name to search events for
   #-returns: list of names and list of event ids
-  @endpoints.method(EVENT_SEARCH_REQUEST, EventSearchResponse,
+  @endpoints.method(SEARCH_REQUEST, EventSearchResponse,
   path='events/search', http_method='GET', name='searchEvent')
   def searchEvent(self, request):
     user = self._authenticateUser()
     return self._mainSearchEvent(request, user)
+
+  #****ENDPOINT: PROFILE SEARCH***
+  #-accepts: first and/or last name to search profile for
+  #-returns: list of profile names, pics, and emails
+  @endpoints.method(SEARCH_REQUEST, ProfileSearchResponse,
+  path='profiles/search', http_method='GET', name='searchProfile')
+  def searchProfile(self, request):
+    self._authenticateUser()
+    return self._searchProfile(request)
+
+  #****ENDPOINT: TEAM SEARCH***
+  #-accepts: search terms for team
+  #-returns: list of team pics, names, distances, and ids
+  @endpoints.method(SEARCH_REQUEST, TeamSearchResponse,
+  path='teams/search', http_method='GET', name='searchTeam')
+  def searchTeam(self, request):
+    user = self._authenticateUser()
+    return self._searchTeam(request, user)
   
   #****ENDPOINT: APPROVE PENDING EVENT ATTENDEES***
   #-accepts: event name, event organizer email
@@ -2679,7 +3099,21 @@ class connectEDApi(remote.Service):
   path='debug2', http_method='GET', name='debug2')
   def debug2(self, request):
     return self._eventsDistributeRemainingHours()
+  
+  #****ENDPOINT: update top teams debugger***
+  @endpoints.method(EMPTY_REQUEST, EmptyResponse,
+  path='debug3', http_method='GET', name='debug3')
+  def debug3(self, request):
+    return self._updateTopTeams()
+  
+
+  #****ENDPOINT: create Top_Teams entity***
+  @endpoints.method(EMPTY_REQUEST, EmptyResponse,
+  path='topteams', http_method='GET', name='topteams')
+  def topteams(self, request):
+    return self._createTopTeams()
   """
+  
 
   ##################################################################################
   ##################           STATIC FUNCTIONS               ######################
@@ -2727,6 +3161,8 @@ class connectEDApi(remote.Service):
               event_history.registered_attendees = roster_object.attendees
             if hasattr(roster_object, 'signed_in_attendees'):
               event_history.signed_in_attendees = roster_object.signed_in_attendees
+            if hasattr(roster_object, 'teams'):
+              event_history.teams = roster_object.teams
             event_history.put()
             event.key.delete()
             updates_entity.key.delete()
@@ -2776,10 +3212,25 @@ class connectEDApi(remote.Service):
                       #add the hours spent at this event to event hours
                       this_profile.event_hours.append(hours)
                       #add to the attendees total hours
-                      if this_profile.hours:
-                        this_profile.hours += hours
-                      else:
-                        this_profile.hours = hours
+                      this_profile.hours += hours
+                      #get associated team (if user signed up with one) and add hours
+                      user_index = roster_entity.attendees.index(this_profile.email)
+                      associated_team = roster_entity.teams[user_index]
+                      team_entity = ndb.Key(Team, associated_team).get()
+                      if team_entity:
+                        team_entity.t_hours += hours
+                        e_id = event.e_organizer+'_'+event.e_orig_title
+                        sign_out_time = datetime.now()
+                        #if event is not already in team event history, put it there and add date and hours
+                        if e_id not in team_entity.events_history:
+                          team_entity.events_history.append(e_id)
+                          team_entity.dates_history.append(sign_out_time)
+                          team_entity.hours_history.append(hours)
+                        #if event already in team history, only add hours
+                        else:
+                          event_index = team_entity.events_history.index(e_id)
+                          team_entity.hours_history[event_index] += hours
+                        team_entity.put()
                       this_profile.put()
                   count += 1
               del roster_entity.sign_in_times[:]
@@ -2791,6 +3242,70 @@ class connectEDApi(remote.Service):
         event.put()
   
     return EmptyResponse()
+
+  #***STATIC FUNCTION: CRON JOB FOR DISTRIBUTING HOURS TO EVENT ATTENDEES***
+  #Description: called by cron job every 2 hours to distribute hours and set discard flag to 1 
+  @staticmethod
+  def _updateTopTeams():
+    #get all teams
+    team_list = Team.query().fetch()
+
+    top_teams = Top_Teams.query().get()
+
+    if team_list:
+      teams_dict = {}
+      team_index = 0
+      for this_team in team_list:
+        teams_dict[team_index] = this_team.t_hours
+        team_index += 1
+
+      sorted_team_names = []
+      sorted_team_ids = []
+      sorted_team_hours = []
+      for key, value in sorted(teams_dict.iteritems(), key=lambda (k,v): (v,k), reverse=True):
+        sorted_team_names.append(team_list[key].t_name)
+        sorted_team_ids.append(team_list[key].t_orig_name)
+        sorted_team_hours.append(value)
+
+      top_teams.top_team_names = []
+      top_teams.top_team_ids = []
+      top_teams.top_team_hours = []
+    
+      count = 0
+      for team_name in sorted_team_names:
+        if count == 11:
+          break
+        top_teams.top_team_names.append(team_name)
+        top_teams.top_team_ids.append(sorted_team_ids[count])
+        top_teams.top_team_hours.append(sorted_team_hours[count])
+        count +=1
+      
+      top_teams.put()
+
+    return EmptyResponse()
+
+  """
+  #***FUNCTION: CREATE TOP_TEAMS ENTITY***
+  #Description: called once to create top teams entity
+  def _createTopTeams(self):
+    t_t_key = ndb.Key(Top_Teams, "topteams")
+    t_t_entity = t_t_key.get()
+    if t_t_entity:
+      t_t_entity.key.delete()
+      raise endpoints.BadRequestException("Top teams entity already created")
+    
+    top_teams = Top_Teams(
+      key = t_t_key,
+      top_team_names = [],
+      top_team_ids = [],
+      top_team_hours = []
+    )
+
+    top_teams.put()
+    return EmptyResponse()
+  """
+
+  
 
 
   

@@ -213,6 +213,12 @@
     },
     "ModelsEventGetResponse": {
       "properties": {
+        "attendees": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "capacity": {
           "format": "int64",
           "type": "string"
@@ -277,6 +283,16 @@
           },
           "type": "array"
         },
+        "is_registered": {
+          "format": "int64",
+          "type": "string"
+        },
+        "leaders": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "num_attendees": {
           "format": "int64",
           "type": "string"
@@ -285,6 +301,12 @@
           "format": "int64",
           "type": "string"
         },
+        "pending_attendees": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "privacy": {
           "type": "string"
         },
@@ -292,47 +314,6 @@
           "type": "string"
         },
         "req_skills": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "start": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "state": {
-          "type": "string"
-        },
-        "street": {
-          "type": "string"
-        },
-        "zip_code": {
-          "type": "string"
-        }
-      },
-      "type": "object"
-    },
-    "ModelsEventRosterGetResponse": {
-      "properties": {
-        "attendees": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "leaders": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "organizer": {
-          "type": "string"
-        },
-        "pending_attendees": {
           "items": {
             "type": "string"
           },
@@ -350,11 +331,26 @@
           },
           "type": "array"
         },
+        "start": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "state": {
+          "type": "string"
+        },
+        "street": {
+          "type": "string"
+        },
         "teams": {
           "items": {
             "type": "string"
           },
           "type": "array"
+        },
+        "zip_code": {
+          "type": "string"
         }
       },
       "type": "object"
@@ -368,7 +364,19 @@
           },
           "type": "array"
         },
+        "event_dates": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "event_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "event_pics": {
           "items": {
             "type": "string"
           },
@@ -396,6 +404,14 @@
             "type": "string"
           },
           "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "ModelsGenericOneLiner": {
+      "properties": {
+        "response": {
+          "type": "string"
         }
       },
       "type": "object"
@@ -602,6 +618,9 @@
         "education": {
           "type": "string"
         },
+        "env_pref": {
+          "type": "string"
+        },
         "first_name": {
           "type": "string"
         },
@@ -637,6 +656,9 @@
         "sat": {
           "type": "boolean"
         },
+        "search_rad": {
+          "type": "string"
+        },
         "skills": {
           "items": {
             "type": "string"
@@ -668,6 +690,10 @@
         },
         "first_name": {
           "type": "string"
+        },
+        "hours": {
+          "format": "double",
+          "type": "number"
         },
         "interests": {
           "items": {
@@ -703,6 +729,29 @@
         "lat",
         "lon"
       ],
+      "type": "object"
+    },
+    "ModelsProfileSearchResponse": {
+      "properties": {
+        "email": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "name": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "pic": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
       "type": "object"
     },
     "ModelsTeamApproveRequest": {
@@ -777,15 +826,35 @@
           "format": "int64",
           "type": "string"
         },
+        "is_registered": {
+          "format": "int64",
+          "type": "string"
+        },
         "t_city": {
           "type": "string"
         },
         "t_desc": {
           "type": "string"
         },
-        "t_members": {
+        "t_hours": {
+          "format": "double",
+          "type": "number"
+        },
+        "t_leaders": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "t_member_num": {
           "format": "int64",
           "type": "string"
+        },
+        "t_members": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "t_name": {
           "type": "string"
@@ -796,9 +865,15 @@
         "t_orig_name": {
           "type": "string"
         },
-        "t_pending_members": {
+        "t_pending_member_num": {
           "format": "int64",
           "type": "string"
+        },
+        "t_pending_members": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "t_photo": {
           "type": "string"
@@ -812,6 +887,23 @@
       },
       "type": "object"
     },
+    "ModelsTeamHistoryGetResponse": {
+      "properties": {
+        "event_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "event_names": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
     "ModelsTeamRequest": {
       "properties": {
         "team": {
@@ -820,21 +912,52 @@
       },
       "type": "object"
     },
-    "ModelsTeamRosterGetResponse": {
+    "ModelsTeamSearchResponse": {
       "properties": {
-        "leaders": {
+        "distance": {
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "name": {
           "items": {
             "type": "string"
           },
           "type": "array"
         },
-        "members": {
+        "pic": {
           "items": {
             "type": "string"
           },
           "type": "array"
         },
-        "pending_members": {
+        "t_id": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "ModelsTopTeamsResponse": {
+      "properties": {
+        "top_team_hours": {
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "top_team_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "top_team_names": {
           "items": {
             "type": "string"
           },
@@ -1024,7 +1147,7 @@
           "200": {
             "description": "A successful response",
             "schema": {
-              "$ref": "#/definitions/ModelsEmptyResponse"
+              "$ref": "#/definitions/ModelsGenericOneLiner"
             }
           }
         }
@@ -1084,33 +1207,6 @@
             "description": "A successful response",
             "schema": {
               "$ref": "#/definitions/ModelsEmptyResponse"
-            }
-          }
-        }
-      }
-    },
-    "/connected/v1/events/{e_organizer_email}/{url_event_orig_name}/roster": {
-      "get": {
-        "operationId": "connectEDApi_getEventRoster",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "e_organizer_email",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "in": "path",
-            "name": "url_event_orig_name",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "A successful response",
-            "schema": {
-              "$ref": "#/definitions/ModelsEventRosterGetResponse"
             }
           }
         }
@@ -1279,6 +1375,27 @@
         }
       }
     },
+    "/connected/v1/profiles/search": {
+      "get": {
+        "operationId": "connectEDApi_searchProfile",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "search_term",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response",
+            "schema": {
+              "$ref": "#/definitions/ModelsProfileSearchResponse"
+            }
+          }
+        }
+      }
+    },
     "/connected/v1/profiles/{email_to_get}": {
       "get": {
         "operationId": "connectEDApi_getProfile",
@@ -1384,6 +1501,27 @@
         }
       }
     },
+    "/connected/v1/teams/search": {
+      "get": {
+        "operationId": "connectEDApi_searchTeam",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "search_term",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response",
+            "schema": {
+              "$ref": "#/definitions/ModelsTeamSearchResponse"
+            }
+          }
+        }
+      }
+    },
     "/connected/v1/teams/suggested": {
       "get": {
         "operationId": "connectEDApi_getSuggestedTeam",
@@ -1393,6 +1531,20 @@
             "description": "A successful response",
             "schema": {
               "$ref": "#/definitions/ModelsGetProfileSuggestedTeams"
+            }
+          }
+        }
+      }
+    },
+    "/connected/v1/teams/top": {
+      "get": {
+        "operationId": "connectEDApi_getTopTeams",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "A successful response",
+            "schema": {
+              "$ref": "#/definitions/ModelsTopTeamsResponse"
             }
           }
         }
@@ -1466,6 +1618,27 @@
         }
       }
     },
+    "/connected/v1/teams/{url_team_orig_name}/history": {
+      "get": {
+        "operationId": "connectEDApi_getTeamHistory",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "url_team_orig_name",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response",
+            "schema": {
+              "$ref": "#/definitions/ModelsTeamHistoryGetResponse"
+            }
+          }
+        }
+      }
+    },
     "/connected/v1/teams/{url_team_orig_name}/registration": {
       "delete": {
         "operationId": "connectEDApi_deregisterForTeam",
@@ -1486,7 +1659,7 @@
           }
         }
       },
-      "put": {
+      "get": {
         "operationId": "connectEDApi_RegisterForTeam",
         "parameters": [
           {
@@ -1501,27 +1674,6 @@
             "description": "A successful response",
             "schema": {
               "$ref": "#/definitions/ModelsEmptyResponse"
-            }
-          }
-        }
-      }
-    },
-    "/connected/v1/teams/{url_team_orig_name}/roster": {
-      "get": {
-        "operationId": "connectEDApi_getTeamRoster",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "url_team_orig_name",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "A successful response",
-            "schema": {
-              "$ref": "#/definitions/ModelsTeamRosterGetResponse"
             }
           }
         }

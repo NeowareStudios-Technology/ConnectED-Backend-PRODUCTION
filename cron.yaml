@@ -6,3 +6,7 @@ cron:
 - description: delete past events and save history
   url: /crons/eventhours
   schedule: every 2 hours
+
+- description: update top teams entity
+  url: /crons/topteams
+  schedule: every 12 hours

@@ -117,17 +117,27 @@ class TeamGetResponse(messages.Message):
     t_photo = messages.StringField(4)
     #t_capacity = messages.IntegerField(5)
     t_organizer = messages.StringField(5)
-    t_members = messages.IntegerField(6)
+    t_member_num = messages.IntegerField(6)
     t_privacy = messages.StringField(7)
     funds_raised = messages.IntegerField(8)
-    t_pending_members = messages.IntegerField(9)
+    t_pending_member_num = messages.IntegerField(9)
     t_city = messages.StringField(10)
     t_state = messages.StringField(11)
+    t_hours = messages.FloatField(12)
+    t_leaders = messages.StringField(13, repeated=True)
+    t_members = messages.StringField(14, repeated=True)
+    t_pending_members = messages.StringField(15, repeated=True)
+    is_registered = messages.IntegerField(16)
 
+class TeamHistoryGetResponse(messages.Message):
+    event_names = messages.StringField(1, repeated=True)
+    event_ids = messages.StringField(2, repeated=True)
+'''
 class TeamRosterGetResponse(messages.Message):
     leaders = messages.StringField(1, repeated=True)
     members = messages.StringField(2, repeated=True)
     pending_members = messages.StringField(3, repeated=True)
+'''
 
 
 class TeamEditForm(messages.Message):
@@ -139,6 +149,11 @@ class TeamEditForm(messages.Message):
     t_privacy = messages.StringField(5)
     t_city = messages.StringField(6)
     t_state = messages.StringField(7)
+
+class TopTeamsResponse(messages.Message):
+    top_team_names = messages.StringField(1,repeated=True)
+    top_team_ids = messages.StringField(2,repeated=True)
+    top_team_hours = messages.FloatField(3,repeated=True)
 
 
 #Profile related messages------------------------------------------------------------
@@ -169,6 +184,7 @@ class ProfileGetResponse(messages.Message):
     education = messages.StringField(6, required=True)
     skills = messages.StringField(7, repeated=True)
     photo = messages.StringField(8)
+    hours = messages.FloatField(9)
 
 class GetProfileEvents(messages.Message):
     registered_events = messages.StringField(1, repeated=True)
@@ -207,6 +223,9 @@ class ProfileEditForm(messages.Message):
     time_day = messages.StringField(15)
     photo = messages.StringField(16)
     new_password = messages.StringField(17)
+    env_pref = messages.StringField(18)
+    search_rad = messages.StringField(19)
+
 
 class EmailResponse(messages.Message):
     email = messages.StringField(1, required=True)
@@ -260,6 +279,13 @@ class EventGetResponse(messages.Message):
     num_attendees = messages.IntegerField(23)
     funds_raised = messages.IntegerField(24)
     num_pending_attendees = messages.IntegerField(25)
+    teams = messages.StringField(26, repeated=True)
+    attendees = messages.StringField(27, repeated=True)
+    pending_attendees = messages.StringField(28, repeated=True)
+    signed_in_attendees = messages.StringField(29, repeated=True)
+    signed_out_attendees = messages.StringField(30, repeated=True)
+    leaders = messages.StringField(31, repeated=True)
+    is_registered = messages.IntegerField(32)
 
 class EventRosterGetResponse(messages.Message):
     teams = messages.StringField(1, repeated=True)
@@ -323,7 +349,22 @@ class GetEventsInRadiusByDateResponse(messages.Message):
 class EventSearchResponse(messages.Message):
     event_titles = messages.StringField(1, repeated=True)
     event_ids = messages.StringField(2, repeated=True)
-    distances = messages.FloatField(3, repeated=True)
+    event_pics = messages.StringField(3, repeated=True)
+    event_dates = messages.StringField(4, repeated=True)
+    distances = messages.FloatField(5, repeated=True)
+
+class ProfileSearchResponse(messages.Message):
+    name = messages.StringField(1, repeated=True)
+    pic = messages.StringField(2, repeated=True)
+    email = messages.StringField(3, repeated=True)
+
+class TeamSearchResponse(messages.Message):
+    name = messages.StringField(1, repeated=True)
+    t_id = messages.StringField(2, repeated=True)
+    pic = messages.StringField(3, repeated=True)
+    distance = messages.FloatField(4, repeated=True)
+
+
 
 class EventApproveRequest(messages.Message):
     approve_list = messages.StringField(1, repeated=True)
@@ -337,6 +378,13 @@ class TeamRequest(messages.Message):
 class EmptyResponse(messages.Message):
     nothing = messages.IntegerField(1)
 
+class GenericOneLiner(messages.Message):
+    response = messages.StringField(1)
+
+"""
+class SEARCH_REQUEST(messages.Message):
+    search_term = messages.StringField(1,required=True)
+"""
 
 
 
@@ -393,11 +441,15 @@ TEAM_DEL_REQUEST = endpoints.ResourceContainer(
     url_team_orig_name=messages.StringField(3, required=True)
 )
 
-EVENT_SEARCH_REQUEST = endpoints.ResourceContainer(
+
+SEARCH_REQUEST = endpoints.ResourceContainer(
     message_types.VoidMessage,
     search_term = messages.StringField(1, required = True)
 )
+
 """
+
+
 TEAM_EVENT_REG_REQUEST = endpoints.ResourceContainer(
     TeamEventRegRequest,
     e_organizer_email = messages.StringField(1, required=True),
@@ -459,7 +511,7 @@ class Profile(ndb.Model):
     #list of events user is attending or has attended
     #events = ndb.StringProperty(repeated=True)
     #hours of activity accumulated
-    hours = ndb.FloatProperty(default=None)
+    hours = ndb.FloatProperty(default=0)
     funds_raised = ndb.IntegerProperty(default=None)
     reports = ndb.StructuredProperty(Report, repeated=True)
     attended_events = ndb.StringProperty(repeated=True)
@@ -481,6 +533,7 @@ class Profile(ndb.Model):
     photo = ndb.TextProperty()
     search_rad = ndb.IntegerProperty(default=100)
     qr_in_dt = ndb.DateTimeProperty()
+    env_pref = ndb.StringProperty(default = 'b')
 
 
 class Sched(ndb.Model):
@@ -567,6 +620,7 @@ class EventHistory(ndb.Model):
     city = ndb.StringProperty(required=True)
     state = ndb.StringProperty(required=True)
     funds_raised = ndb.IntegerProperty(default=0)
+    teams = ndb.StringProperty(repeated=True)
     registered_attendees = ndb.StringProperty(repeated=True)
     signed_in_attendees = ndb.StringProperty(repeated=True)
     average_att_hours = ndb.FloatProperty()
@@ -577,12 +631,6 @@ class EventHistory(ndb.Model):
 
 
 #Team related models--------------------------------------------------------------
-class T_History(ndb.Model):
-    '''T_History -- T_History object (nested in Team object) ''' 
-    event = ndb.StringProperty(required=True)
-    date = ndb.DateProperty()
-    hours = ndb.FloatProperty()
-
 class Team(ndb.Model):
     '''Team -- Team object ''' 
     #cannot have "/" in name
@@ -596,7 +644,6 @@ class Team(ndb.Model):
     t_members = ndb.IntegerProperty(default=0)
     t_pending_members = ndb.IntegerProperty(default=0)
     #need hist attendees separate from history for constraint reasons
-    history = ndb.StructuredProperty(T_History, repeated=True)
     hist_attendees = ndb.StringProperty(repeated=True)
     funds_raised = ndb.IntegerProperty(default=0)
     t_privacy = ndb.StringProperty(required=True,choices=['o','p'])
@@ -605,6 +652,10 @@ class Team(ndb.Model):
     t_city = ndb.StringProperty(required=True)
     t_state = ndb.StringProperty(required=True)
     t_location = ndb.GeoPtProperty()
+    t_hours = ndb.FloatProperty(default=0)
+    events_history = ndb.StringProperty(repeated=True)
+    dates_history = ndb.DateTimeProperty(repeated=True)
+    hours_history = ndb.FloatProperty(repeated=True)
 
 class T_Roster(ndb.Model):
     '''T_Roster -- T_Roster object (child of Team object) ''' 
@@ -613,6 +664,13 @@ class T_Roster(ndb.Model):
     pending_members = ndb.StringProperty(repeated=True)
     t_name = ndb.StringProperty(required=True)
     t_orig_name = ndb.StringProperty(required=True)
+
+class Top_Teams(ndb.Model):
+    top_team_names = ndb.StringProperty(repeated=True)
+    top_team_ids = ndb.StringProperty(repeated=True)
+    top_team_hours = ndb.FloatProperty(repeated=True)
+
+
 
 
 
