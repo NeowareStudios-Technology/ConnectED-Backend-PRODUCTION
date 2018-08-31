@@ -87,7 +87,7 @@ FIREBASE_ID = "118742092535-k49n78fln2psmi584cldjkd319rsdjnf.apps.googleusercont
 #firebase client ID RELEASE
 #FIREBASE_ID = 32366828803-g14dan8j9m1dhises6namb5vpebopgpd.apps.googleusercontent.com
 
-@endpoints.api(name='connected', version='v1', allowed_client_ids=[FIREBASE_ID],issuers={'firebase': endpoints.Issuer('https://securetoken.google.com/connected-dev-214119','https://www.googleapis.com/service_accounts/v1/metadata/x509/securetoken@system.gserviceaccount.com')})#,  issuers={'serviceAccount': endpoints.Issuer('fleet-fortress-211105@appspot.gserviceaccount.com','https://www.googleapis.com/robot/v1/metadata/x509/fleet-fortress-211105@appspot.gserviceaccount.com')},audiences={'serviceAccount': ['https://www.googleapis.com/oauth2/v4/token']})
+@endpoints.api(name='connected', version='v1',api_key_required=True, allowed_client_ids=[FIREBASE_ID],issuers={'firebase': endpoints.Issuer('https://securetoken.google.com/connected-dev-214119','https://www.googleapis.com/service_accounts/v1/metadata/x509/securetoken@system.gserviceaccount.com')})#,  issuers={'serviceAccount': endpoints.Issuer('fleet-fortress-211105@appspot.gserviceaccount.com','https://www.googleapis.com/robot/v1/metadata/x509/fleet-fortress-211105@appspot.gserviceaccount.com')},audiences={'serviceAccount': ['https://www.googleapis.com/oauth2/v4/token']})
 #, issuers={'auth0': endpoints.Issuer('https://connected-app.auth0.com','https://connected-app.auth0.com/.well-known/jwks.json')}, audiences=[ANDROID_AUDIENCE])
 class connectEDApi(remote.Service):
   """connectED API v1."""

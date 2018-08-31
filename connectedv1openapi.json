@@ -993,7 +993,12 @@
               "$ref": "#/definitions/ModelsEmptyResponse"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
       },
       "put": {
         "operationId": "connectEDApi_editEvent",
@@ -1013,7 +1018,12 @@
               "$ref": "#/definitions/ModelsEmptyResponse"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
       }
     },
     "/connected/v1/events/prefill": {
@@ -1027,7 +1037,12 @@
               "$ref": "#/definitions/ModelsGetEventsInRadiusResponse"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
       }
     },
     "/connected/v1/events/prefill/dates": {
@@ -1041,7 +1056,12 @@
               "$ref": "#/definitions/ModelsGetEventsInRadiusByDateResponse"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
       }
     },
     "/connected/v1/events/search": {
@@ -1062,7 +1082,12 @@
               "$ref": "#/definitions/ModelsEventSearchResponse"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
       }
     },
     "/connected/v1/events/{e_organizer_email}/{url_event_orig_name}": {
@@ -1089,7 +1114,12 @@
               "$ref": "#/definitions/ModelsEventGetResponse"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
       }
     },
     "/connected/v1/events/{e_organizer_email}/{url_event_orig_name}/approve": {
@@ -1123,7 +1153,12 @@
               "$ref": "#/definitions/ModelsEmptyResponse"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
       }
     },
     "/connected/v1/events/{e_organizer_email}/{url_event_orig_name}/qr": {
@@ -1150,7 +1185,12 @@
               "$ref": "#/definitions/ModelsGenericOneLiner"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
       }
     },
     "/connected/v1/events/{e_organizer_email}/{url_event_orig_name}/registration": {
@@ -1177,7 +1217,12 @@
               "$ref": "#/definitions/ModelsEmptyResponse"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
       },
       "put": {
         "operationId": "connectEDApi_RegisterForEvent",
@@ -1209,7 +1254,12 @@
               "$ref": "#/definitions/ModelsEmptyResponse"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
       }
     },
     "/connected/v1/events/{e_organizer_email}/{url_event_orig_name}/updates": {
@@ -1236,7 +1286,12 @@
               "$ref": "#/definitions/ModelsEventUpdatesGetResponse"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
       }
     },
     "/connected/v1/events/{url_event_orig_name}": {
@@ -1262,7 +1317,12 @@
               "$ref": "#/definitions/ModelsEmptyResponse"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
       }
     },
     "/connected/v1/events/{url_event_orig_name}/leaders": {
@@ -1292,7 +1352,12 @@
               "$ref": "#/definitions/ModelsEmptyResponse"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
       },
       "put": {
         "operationId": "connectEDApi_addEventLeaders",
@@ -1318,7 +1383,12 @@
               "$ref": "#/definitions/ModelsEmptyResponse"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
       }
     },
     "/connected/v1/profiles": {
@@ -1332,7 +1402,12 @@
               "$ref": "#/definitions/ModelsEmptyResponse"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
       },
       "post": {
         "operationId": "connectEDApi_createProfile",
@@ -1352,7 +1427,12 @@
               "$ref": "#/definitions/ModelsEmptyResponse"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
       },
       "put": {
         "operationId": "connectEDApi_editProfile",
@@ -1372,7 +1452,12 @@
               "$ref": "#/definitions/ModelsEmptyResponse"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
       }
     },
     "/connected/v1/profiles/search": {
@@ -1393,7 +1478,12 @@
               "$ref": "#/definitions/ModelsProfileSearchResponse"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
       }
     },
     "/connected/v1/profiles/{email_to_get}": {
@@ -1414,7 +1504,12 @@
               "$ref": "#/definitions/ModelsProfileGetResponse"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
       }
     },
     "/connected/v1/profiles/{email_to_get}/events": {
@@ -1435,7 +1530,12 @@
               "$ref": "#/definitions/ModelsGetProfileEvents"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
       }
     },
     "/connected/v1/profiles/{email_to_get}/teams": {
@@ -1456,7 +1556,12 @@
               "$ref": "#/definitions/ModelsGetProfileTeamsResponse"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
       }
     },
     "/connected/v1/teams": {
@@ -1478,7 +1583,12 @@
               "$ref": "#/definitions/ModelsEmptyResponse"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
       },
       "put": {
         "operationId": "connectEDApi_editTeam",
@@ -1498,7 +1608,12 @@
               "$ref": "#/definitions/ModelsEmptyResponse"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
       }
     },
     "/connected/v1/teams/search": {
@@ -1519,7 +1634,12 @@
               "$ref": "#/definitions/ModelsTeamSearchResponse"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
       }
     },
     "/connected/v1/teams/suggested": {
@@ -1533,7 +1653,12 @@
               "$ref": "#/definitions/ModelsGetProfileSuggestedTeams"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
       }
     },
     "/connected/v1/teams/top": {
@@ -1547,7 +1672,12 @@
               "$ref": "#/definitions/ModelsTopTeamsResponse"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
       }
     },
     "/connected/v1/teams/{team_name}/approve": {
@@ -1575,7 +1705,12 @@
               "$ref": "#/definitions/ModelsEmptyResponse"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
       }
     },
     "/connected/v1/teams/{url_team_orig_name}": {
@@ -1596,7 +1731,12 @@
               "$ref": "#/definitions/ModelsEmptyResponse"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
       },
       "get": {
         "operationId": "connectEDApi_getTeam",
@@ -1615,7 +1755,12 @@
               "$ref": "#/definitions/ModelsTeamGetResponse"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
       }
     },
     "/connected/v1/teams/{url_team_orig_name}/history": {
@@ -1636,7 +1781,12 @@
               "$ref": "#/definitions/ModelsTeamHistoryGetResponse"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
       }
     },
     "/connected/v1/teams/{url_team_orig_name}/registration": {
@@ -1657,7 +1807,12 @@
               "$ref": "#/definitions/ModelsEmptyResponse"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
       },
       "get": {
         "operationId": "connectEDApi_RegisterForTeam",
@@ -1676,7 +1831,12 @@
               "$ref": "#/definitions/ModelsEmptyResponse"
             }
           }
-        }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
       }
     }
   },
@@ -1687,6 +1847,11 @@
     "https"
   ],
   "securityDefinitions": {
+    "api_key": {
+      "in": "query",
+      "name": "key",
+      "type": "apiKey"
+    },
     "firebase": {
       "authorizationUrl": "",
       "flow": "implicit",
