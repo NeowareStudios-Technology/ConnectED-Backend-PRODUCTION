@@ -69,7 +69,11 @@ env_variables:
   # The following values are to be replaced by information from the output of
   # 'gcloud endpoints services deploy swagger.json' command.
   ENDPOINTS_SERVICE_NAME: connected-dev-214119.appspot.com
+<<<<<<< HEAD
   ENDPOINTS_SERVICE_VERSION: 2018-08-31r11
+=======
+  ENDPOINTS_SERVICE_VERSION: 2018-08-31r8
+>>>>>>> parent of f2a39e7... before API key
 
 
 
