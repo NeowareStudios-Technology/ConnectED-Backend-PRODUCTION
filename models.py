@@ -532,7 +532,7 @@ class Profile(ndb.Model):
     #pending_teams = ndb.StringProperty(repeated=True)
     photo = ndb.TextProperty()
     search_rad = ndb.IntegerProperty(default=100)
-    qr_in_dt = ndb.DateTimeProperty()
+    qr_in_dt = ndb.DateTimeProperty(indexed=False)
     env_pref = ndb.StringProperty(default = 'b')
 
 
@@ -573,7 +573,7 @@ class Event(ndb.Model):
     num_pending_teams = ndb.IntegerProperty(default=0)
     capacity = ndb.IntegerProperty()
     sched = ndb.StructuredProperty(Day, repeated=True)
-    street = ndb.StringProperty(required=True, indexed=False)
+    street = ndb.StringProperty(required=True)
     city = ndb.StringProperty(required=True)
     state = ndb.StringProperty(required=True)
     zip_code = ndb.StringProperty(required=True)
