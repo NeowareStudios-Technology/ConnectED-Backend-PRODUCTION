@@ -224,7 +224,7 @@ class ProfileEditForm(messages.Message):
     photo = messages.StringField(16)
     new_password = messages.StringField(17)
     env_pref = messages.StringField(18)
-    search_rad = messages.StringField(19)
+    search_rad = messages.IntegerField(19)
 
 
 class EmailResponse(messages.Message):
