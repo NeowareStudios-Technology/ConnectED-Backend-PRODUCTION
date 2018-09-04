@@ -648,6 +648,67 @@ class connectEDApi(remote.Service):
     
     return EmptyResponse()
 
+  #***HELPER FUNCTION: DENY PENDING TEAM MEMBERS***
+  #Description: deny pending team members (only team organizer)
+  #Params: request- PUT request sent to teamDenyPending() endpoint (team name, list of approvals)
+  #Returns: list of approvals
+  #Called by: teamApprovePending() endpoint
+  @ndb.transactional(xg=True)
+  def _tDenyPending(self, request, user):
+    #get user profile entity
+    user_email = user.email()
+    profile_entity = ndb.Key(Profile, user_email).get()
+    if not profile_entity:
+      raise endpoints.NotFoundException('Profile not found')
+    
+    #get team entity
+    t_name = request.team_name
+    t_name = t_name.replace(" ", "+")
+    team_entity = ndb.Key(Team, t_name).get()
+    if not team_entity:
+      raise endpoints.NotFoundException('Team not found')
+
+    #check that user is event organizer
+    if user_email != team_entity.t_organizer:
+      raise endpoints.UnauthorizedException('User must be team organizer')
+    """
+   #if members is at capacity, return error
+    if team_entity.t_capacity:
+      if team_entity.t_members >= team_entity.t_capacity:
+        raise endpoints.BadRequestException('Team is already at capacity')
+    """
+    #get team roster entity
+    t_roster_entity = T_Roster.query(ancestor=team_entity.key).get()
+    if not t_roster_entity:
+      raise endpoints.NotFoundException('Team roster not found')
+
+    #deny member 
+    for member in getattr(request, 'approve_list'):
+      if member in t_roster_entity.pending_members:
+        t_roster_entity.pending_members.remove(member)
+        team_entity.t_pending_members-=1
+        
+    '''
+    #register just-approved users to any events that team is already signed up for
+    if team_entity.registered_events:
+      for this_event in team_entity.registered_events:
+        this_event_entity = ndb.Key(Event, this_event).get()
+        if this_event_entity:
+          this_event_roster = E_Roster.query(ancestor=this_event_entity.key).get()
+          for member in getattr(request, 'approve_list'):
+            if this_event_entity.num_attendees < this_event_entity.capacity:
+              this_event_entity.num_attendees += 1
+              this_event_roster.attendees.append(member)
+          this_event_entity.put()
+          this_event_roster.put()
+    '''
+            
+              
+    t_roster_entity.put()
+    team_entity.put()
+    
+    return EmptyResponse()
+
   #***HELPER FUNCTION: CREATE NEW PROFILE***
   #Description: create a new profile if one does not already exist
   #Params: request- POST request sent to createProfile() endpoint (profile info)
@@ -1955,6 +2016,56 @@ class connectEDApi(remote.Service):
     
     return EmptyResponse()
 
+  #***HELPER FUNCTION: DENY PENDING EVENT ATTENDEES***
+  #Description: deny pending event attendees (only event organizer)
+  #Params: request- PUT request sent to eventDenyPending() endpoint (url safe original event name, event creator email, list of denials)
+  #Returns: none
+  #Called by: eventDenyPending() endpoint
+  @ndb.transactional(xg=True)
+  def _eDenyPending(self, request, user):
+    #get user profile entity
+    user_email = user.email()
+    profile_entity = ndb.Key(Profile, user_email).get()
+    if not profile_entity:
+      raise endpoints.NotFoundException('Profile not found')
+    
+    #get event entity
+    e_organizer = request.e_organizer_email
+    e_title = request.url_event_orig_name
+    e_title = e_title.replace(" ", "+")
+    e_id = e_organizer + '_' + e_title
+    event_entity = ndb.Key(Event, e_id).get()
+    if not event_entity:
+      raise endpoints.NotFoundException('Event not found')
+
+    #check that user is event organizer
+    if user_email != event_entity.e_organizer:
+      raise endpoints.UnauthorizedException('User must be event organizer')
+
+    #get event roster entity
+    e_roster_entity = E_Roster.query(ancestor=event_entity.key).get()
+    if not e_roster_entity:
+      raise endpoints.NotFoundException('Event roster not found')
+
+    #deny member 
+    for member in getattr(request, 'approve_list'):
+      if member in e_roster_entity.pending_attendees:
+        #get index to find corresponding team
+        index = e_roster_entity.pending_attendees.index(member)
+        #remove attendee from pending
+        e_roster_entity.pending_attendees.remove(member)
+        event_entity.num_pending_attendees-=1
+        #remove team from pending
+        removed_team = e_roster_entity.pending_teams.pop(index)
+        if removed_team != '-':
+          event_entity.num_pending_teams -= 1
+
+    e_roster_entity.put()
+    event_entity.put()
+    
+    return EmptyResponse()
+
+
   """
   #***HELPER FUNCTION: APPROVE PENDING TEAMS FOR EVENT***
   #Description: approve pending teams for event (only event organizer)
@@ -3061,12 +3172,21 @@ class connectEDApi(remote.Service):
   
   #****ENDPOINT: APPROVE PENDING EVENT ATTENDEES***
   #-accepts: event name, event organizer email
-  #-returns: event name
+  #-returns: none
   @endpoints.method(EVENT_APPROVE_REQUEST, EmptyResponse,
   path='events/{e_organizer_email}/{url_event_orig_name}/approve', http_method='PUT', name='eventApprovePending')
   def eventApprovePending(self, request):
     user = self._authenticateUser()
     return self._eApprovePending(request, user)
+
+  #****ENDPOINT: DENY PENDING EVENT ATTENDEES***
+  #-accepts: event name, event organizer email
+  #-returns: none
+  @endpoints.method(EVENT_APPROVE_REQUEST, EmptyResponse,
+  path='events/{e_organizer_email}/{url_event_orig_name}/deny', http_method='PUT', name='eventDenyPending')
+  def eventDenyPending(self, request):
+    user = self._authenticateUser()
+    return self._eDenyPending(request, user)
 
   #****ENDPOINT: APPROVE PENDING TEAM MEMBERS***
   #-accepts: list of approvals (emails), team name
@@ -3076,6 +3196,15 @@ class connectEDApi(remote.Service):
   def teamApprovePending(self, request):
     user = self._authenticateUser()
     return self._tApprovePending(request, user)
+
+  #****ENDPOINT: DENY PENDING TEAM MEMBERS***
+  #-accepts: list of denials (emails), team name
+  #-returns: list of denials
+  @endpoints.method(APPROVE_TEAM_MEMBERS_REQUEST, EmptyResponse,
+  path='teams/{team_name}/deny', http_method='PUT', name='teamDenyPending')
+  def teamDenyPending(self, request):
+    user = self._authenticateUser()
+    return self._tDenyPending(request, user)
   
   """
   #****ENDPOINT: APPROVE PENDING TEAMS FOR EVENT***

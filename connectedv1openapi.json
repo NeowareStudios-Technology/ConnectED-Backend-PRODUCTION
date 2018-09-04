@@ -657,6 +657,7 @@
           "type": "boolean"
         },
         "search_rad": {
+          "format": "int64",
           "type": "string"
         },
         "skills": {
@@ -1126,6 +1127,40 @@
         }
       }
     },
+    "/connected/v1/events/{e_organizer_email}/{url_event_orig_name}/deny": {
+      "put": {
+        "operationId": "connectEDApi_eventDenyPending",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/ModelsEventApproveRequest"
+            }
+          },
+          {
+            "in": "path",
+            "name": "e_organizer_email",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "path",
+            "name": "url_event_orig_name",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response",
+            "schema": {
+              "$ref": "#/definitions/ModelsEmptyResponse"
+            }
+          }
+        }
+      }
+    },
     "/connected/v1/events/{e_organizer_email}/{url_event_orig_name}/qr": {
       "get": {
         "operationId": "connectEDApi_qrEvent",
@@ -1553,6 +1588,34 @@
     "/connected/v1/teams/{team_name}/approve": {
       "put": {
         "operationId": "connectEDApi_teamApprovePending",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/ModelsTeamApproveRequest"
+            }
+          },
+          {
+            "in": "path",
+            "name": "team_name",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response",
+            "schema": {
+              "$ref": "#/definitions/ModelsEmptyResponse"
+            }
+          }
+        }
+      }
+    },
+    "/connected/v1/teams/{team_name}/deny": {
+      "put": {
+        "operationId": "connectEDApi_teamDenyPending",
         "parameters": [
           {
             "in": "body",
