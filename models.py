@@ -429,9 +429,22 @@ EVENT_ADD_LEADERS_REQUEST = endpoints.ResourceContainer(
 )
 
 #Resource container for adding leaders to event (needed for url)
+TEAM_ADD_LEADERS_REQUEST = endpoints.ResourceContainer(
+    EventAddLeaders,
+    team_orig_name=messages.StringField(1, required=True)
+)
+
+#Resource container for adding leaders to event (needed for url)
 EVENT_DELETE_LEADERS_REQUEST = endpoints.ResourceContainer(
     message_types.VoidMessage,
     url_event_orig_name=messages.StringField(1, required=True),
+    leaders=messages.StringField(2, repeated=True)
+)
+
+#Resource container for adding leaders to event (needed for url)
+TEAM_DELETE_LEADERS_REQUEST = endpoints.ResourceContainer(
+    message_types.VoidMessage,
+    team_orig_name=messages.StringField(1, required=True),
     leaders=messages.StringField(2, repeated=True)
 )
 

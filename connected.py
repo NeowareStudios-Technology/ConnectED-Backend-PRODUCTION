@@ -74,6 +74,8 @@ from models import TopTeamsResponse
 from models import ProfileSearchResponse
 from models import TeamSearchResponse
 from models import TeamHistoryGetResponse
+from models import TEAM_ADD_LEADERS_REQUEST
+from models import TEAM_DELETE_LEADERS_REQUEST
 
 import googlemaps
 
@@ -1081,9 +1083,15 @@ class connectEDApi(remote.Service):
     if not event_roster_entity:
       raise endpoints.NotFoundException('Could not find event roster')
     
+    #register flag =
+    # 0 for not registered
+    # 1 for registered
+    # -1 for pending
     register_flag = 0
     if user.email() in event_roster_entity.attendees:
       register_flag = 1
+    elif user.email() in event_roster_entity.pending_attendees:
+      register_flag = -1
 
     #create response object
     response = EventGetResponse(
@@ -2460,6 +2468,81 @@ class connectEDApi(remote.Service):
 
     return EmptyResponse()
 
+
+  #***HELPER FUNCTION: ADD LEADERS TO TEAM***
+  #Description: add leaders to an team (creating a Roster child entity if not created already) and event to leaders
+  #Params: request- POST request sent to addTeamLeaders() endpoint (leaders emails)
+  #Returns: request- POST request sent to addTeamLeaders() endpoint (leaders emails)
+  #Called by: addTeamLeaders() endpoint
+  @ndb.transactional(xg=True)
+  def _addTeamLeaders(self, request, user):
+    #get user profile entity
+    profile_entity = ndb.Key(Profile, user.email()).get()
+    #get team entity
+    decoded_team_name = request.team_orig_name
+    decoded_team_name = decoded_team_name.replace(' ','+')
+    team_entity = ndb.Key(Team,decoded_team_name).get()
+    #if team does not exist, raise exception
+    if not team_entity:
+      raise endpoints.NotFoundException('Team not found')
+    else:
+      #check that caller is organizer of team
+      if team_entity.t_organizer != profile_entity.email:
+        raise endpoints.UnauthorizedException('Authorization required')
+      #check if team already has Roster entity
+      roster_entity = T_Roster.query(ancestor=team_entity.key).get()
+      if roster_entity:
+        #add each leader passed in HTTP request
+        check = 0
+        for new_leader in getattr(request,'leaders'):
+          for old_leader in roster_entity.leaders:
+            if new_leader == old_leader or new_leader == team_entity.t_organizer:
+              check = 1
+        if check == 1:
+          raise endpoints.BadRequestException('Cannot add existing leaders')
+        else:
+          roster_entity.leaders += getattr(request, 'leaders')
+      roster_entity.put()
+    
+    return EmptyResponse()
+  
+
+  #***HELPER FUNCTION: DELETE LEADERS FROM TEAM***
+  #Description: remove leaders from team 
+  #Params: request- DELETE url query string sent to deleteTeamLeaders() endpoint (leaders emails)
+  #Returns: request- DELETE url query string sent to deleteTeamLeaders() endpoint (leaders emails)
+  #Called by: deleteTeamLeaders() endpoint
+  @ndb.transactional(xg=True)
+  def _deleteTeamLeaders(self, request, user):
+    #get user profile entity
+    decoded_email = user.email()
+    #decoded_email = urllib.unquote(str(decoded_email)).decode("utf-8")
+    profile_entity = ndb.Key(Profile, decoded_email).get()
+    #get team entity
+    decoded_team_name = request.team_orig_name
+    decoded_team_name = decoded_team_name.replace(' ','+')
+    team_entity = ndb.Key(Team,decoded_team_name).get()
+    if not team_entity:
+      raise endpoints.NotFoundException('Team not found')
+
+    else:
+      #check that caller is organizer of team
+      if team_entity.t_organizer != profile_entity.email:
+        raise endpoints.UnauthorizedException('Authorization required')
+      #check if team already has Roster entity
+      roster_entity = T_Roster.query(ancestor=team_entity.key).get()
+      if roster_entity:
+        #remove each leader passed in HTTP request
+        for remove_leader in getattr(request,'leaders'):
+          for old_leader in roster_entity.leaders:
+            if remove_leader == old_leader:
+              roster_entity.leaders.remove(remove_leader)
+      roster_entity.put()
+
+    return EmptyResponse()
+  
+
+
   #***HELPER FUNCTION: SEARCH FOR PERSON BY NAME***
   #Description: returns name, pic, and email of searched for profile
   #Params: request- GET url query string sent to searchProfile() endpoint (search term)
@@ -2995,6 +3078,24 @@ class connectEDApi(remote.Service):
     user = self._authenticateUser()
     return self._deleteLeaders(request, user)
 
+  #****ENDPOINT: ADD TEAM LEADERS***
+  #-accepts: leaders to add, original team name
+  #-returns: none
+  @endpoints.method(TEAM_ADD_LEADERS_REQUEST, EmptyResponse,
+  path='teams/{team_orig_name}/leaders', http_method='PUT', name='addTeamLeaders')
+  def addTeamLeaders(self, request):
+    user = self._authenticateUser()
+    return self._addTeamLeaders(request, user)
+
+  #****ENDPOINT: DELETE TEAM LEADERS***
+  #-accepts: leaders to delete, original event name, user email, user password
+  #-returns: leaders to delete, original event name, user email, user password
+  @endpoints.method(TEAM_DELETE_LEADERS_REQUEST, EmptyResponse,
+  path='teams/{team_orig_name}/leaders', http_method='DELETE', name='deleteTeamLeaders')
+  def deleteTeamLeaders(self, request):
+    user = self._authenticateUser()
+    return self._deleteTeamLeaders(request, user)
+
   #****ENDPOINT: CREATE NEW TEAM***
   #-accepts: TeamCreateForm (team info)
   #-returns: team info
@@ -3234,7 +3335,6 @@ class connectEDApi(remote.Service):
   path='debug3', http_method='GET', name='debug3')
   def debug3(self, request):
     return self._updateTopTeams()
-  
 
   #****ENDPOINT: create Top_Teams entity***
   @endpoints.method(EMPTY_REQUEST, EmptyResponse,
@@ -3413,7 +3513,7 @@ class connectEDApi(remote.Service):
 
     return EmptyResponse()
 
-  """
+  
   #***FUNCTION: CREATE TOP_TEAMS ENTITY***
   #Description: called once to create top teams entity
   def _createTopTeams(self):
@@ -3432,7 +3532,7 @@ class connectEDApi(remote.Service):
 
     top_teams.put()
     return EmptyResponse()
-  """
+  
 
   
 
