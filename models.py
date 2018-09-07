@@ -299,6 +299,7 @@ class EventRosterGetResponse(messages.Message):
 class EventUpdatesGetResponse(messages.Message):
     updates = messages.StringField(1, repeated=True)
     u_datetime = messages.StringField(2, repeated=True)
+    events = messages.StringField(3, repeated=True)
 
 
 class EventEditForm(messages.Message): 

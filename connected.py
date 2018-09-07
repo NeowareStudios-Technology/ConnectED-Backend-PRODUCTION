@@ -10,6 +10,7 @@ import json
 #----------------------------------------------------------------------------
 
 from datetime import datetime
+from datetime import timedelta
 
 import endpoints
 from protorpc import messages
@@ -777,6 +778,107 @@ class connectEDApi(remote.Service):
       hours = profile_entity.hours
     )
     return response
+
+  #***HELPER FUNCTION: GET PROFILE***
+  #Description: retrieve info for a specified profile
+  #Params: request- GET request url portion sent to getProfile() endpoint (email of profile to get)
+  #Returns: specified profile core info
+  #Called by: getProfile() endpoint
+  def _viewProfileUpdates(self, request, user):
+    #get profile entity of caller
+    profile_entity = ndb.Key(Profile, user.email()).get()
+    if not profile_entity:
+      raise endpoints.NotFoundException('Could not find profile in database')
+    
+    #declare list to hold all update entities
+    large_update_list = []
+    large_event_name_list = []
+
+    #get all events that user has created (up to 10)
+    events_org_query = Event.query(Event.e_organizer == user.email())
+    events_organized = events_org_query.fetch(10)
+    if events_organized:
+      for event in events_organized:
+        updates_entity = E_Updates.query(ancestor=event.key).get()
+        if updates_entity:
+          large_event_name_list.append(event.e_title)
+          large_update_list.append(updates_entity)
+
+
+    #get all events that user is leader of (up to 10)
+    e_roster_query = E_Roster.query(E_Roster.leaders == user.email())
+    e_rosters_leader_of = e_roster_query.fetch(10)
+    if e_rosters_leader_of:
+      for roster in e_rosters_leader_of:
+        event = ndb.Key(Event, roster.e_id).get()
+        updates_entity = E_Updates.query(ancestor=event.key).get()
+        if updates_entity:
+          large_event_name_list.append(event.e_title)
+          large_update_list.append(updates_entity)
+
+    
+    #get all events that user is attending (up to 20)
+    e_roster_query = E_Roster.query(E_Roster.attendees == user.email())
+    e_rosters_attending = e_roster_query.fetch(20)
+    if e_rosters_leader_of:
+      for roster in e_rosters_attending:
+        event = ndb.Key(Event, roster.e_id).get()
+        updates_entity = E_Updates.query(ancestor=event.key).get()
+        if updates_entity:
+          large_event_name_list.append(event.e_title)
+          large_update_list.append(updates_entity)
+
+    #separate large_update_list into 2 lists of dates and updates to return
+    margin = timedelta(days = 7)
+    today = datetime.now()
+    return_date_list = []
+    return_update_list = []
+    break_check = 0
+    large_count = 0
+    if large_update_list:
+      for update_entity in large_update_list:
+        if break_check ==1:
+          break
+        date_index = 0
+        for date in update_entity.u_datetime:
+          if len(return_date_list) >= 70:
+            break_check = 1
+            break
+          this_date = date
+          if today - margin <= this_date:
+            return_date = date
+            return_date_list.append(return_date)
+            return_update_list.append(update_entity.update[date_index] +'$'+large_event_name_list[large_count])
+          date_index += 1
+        large_count += 1
+    
+    #sort updates by date and split the update string into event name and update
+    response_dict = dict(zip(return_update_list, return_date_list))
+    sorted_update_list = []
+    sorted_date_list = []
+    sorted_event_list = []
+    for key, value in sorted(response_dict.iteritems(), key=lambda (k,v): (v,k)):
+      final_key = key.split('$')
+      sorted_update_list.append(final_key[0])
+      sorted_event_list.append(final_key[1])
+      sorted_date_list.append(value.strftime('%m/%d/%Y'))
+    
+    response = EventUpdatesGetResponse(
+      updates = sorted_update_list,
+      u_datetime = sorted_date_list,
+      events = sorted_event_list
+    )
+
+    return response
+
+
+
+
+
+  
+
+   
+    
 
   #***HELPER FUNCTION: GET PROFILE EVENTS***
   #Description: retrieve event info for a profile
@@ -2967,6 +3069,15 @@ class connectEDApi(remote.Service):
   def getProfileTeams(self, request):
     user = self._authenticateUser()
     return self._viewProfileTeams(request, user)
+
+  #****ENDPOINT: GET PROFILE UPDATES***
+  #-accepts: email to which profile is associated with
+  #-returns: all updates in the past week for the teams/events user is a part of
+  @endpoints.method(EMPTY_REQUEST, EventUpdatesGetResponse, 
+  path='profiles/updates', http_method='GET', name='getProfileUpdates')
+  def getProfileUpdates(self, request):
+    user = self._authenticateUser()
+    return self._viewProfileUpdates(request, user)
 
   #****ENDPOINT: EDIT PROFILE***
   #-accepts: LoginForm (email, password)

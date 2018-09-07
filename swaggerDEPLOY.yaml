@@ -943,6 +943,15 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsProfileSearchResponse'
+  /connected/v1/profiles/updates:
+    get:
+      operationId: connectEDApi_getProfileUpdates
+      parameters: []
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            $ref: '#/definitions/ModelsEventUpdatesGetResponse'
   '/connected/v1/profiles/{email_to_get}':
     get:
       operationId: connectEDApi_getProfile
