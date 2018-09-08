@@ -113,10 +113,11 @@ class connectEDApi(remote.Service):
   #***HELPER FUNCTION: CREATE NEW TEAM***
   #Description: create a new team if one does not already exist
   #Params: request- POST request sent to createTeam() endpoint (team info)
-  #Returns: request- POST request sent to createTeam() endpoint (team info)
+  #Returns: none
   #Called by: createTeam() endpoint
   @ndb.transactional(xg=True)
   def _uploadNewTeam(self, request, user):
+    #save team name with + instead of space in db
     team_name = getattr(request, 't_name')
     url_safe_name = team_name.replace(" ", "+")
     t_key = ndb.Key(Team, url_safe_name)
@@ -155,12 +156,15 @@ class connectEDApi(remote.Service):
       this_lat = this_location['geometry']['location']['lat']
       this_lon = this_location['geometry']['location']['lng']
 
+      #set lat and lon 
       setattr(team, 't_location', ndb.GeoPt(this_lat, this_lon))
 
+      #set team roster
       team_roster = T_Roster(parent = t_key)
       team_roster.t_name = team.t_name
       team_roster.t_orig_name = url_safe_name
 
+      #put all created/edited entites
       team_roster.put()
       team.put()
       profile_entity.put()
@@ -174,21 +178,26 @@ class connectEDApi(remote.Service):
   #Returns: specified team info
   #Called by: getTeam() endpoint
   def _viewTeam(self, request, user):
+    #replace team name spaces with + o access in db
     decoded_team_name = request.url_team_orig_name
     decoded_team_name = decoded_team_name.replace(" ", "+")
-    #decoded_team_name = urllib.unquote(str(decoded_team_name)).decode("utf-8")
+    
+    #get team entity
     team_entity = ndb.Key(Team, decoded_team_name).get()
     if not team_entity:
       raise endpoints.NotFoundException('Could not find team')
 
+    #get team roster entity
     team_roster_entity = T_Roster.query(ancestor = team_entity.key).get()
     if not team_roster_entity:
       raise endpoints.NotFoundException('Could not find team roster')
 
+    #set flag for determining if calling user is registered to team
     register_flag = 0
     if user.email() in team_roster_entity.members:
       register_flag = 1
 
+    #set response message to queried team info
     response = TeamGetResponse(
       t_name = team_entity.t_name,
       t_orig_name = team_entity.t_orig_name,
@@ -205,13 +214,18 @@ class connectEDApi(remote.Service):
       t_pending_members = team_roster_entity.pending_members,
       is_registered = register_flag
     )
+
+    #if team description exists, add it to response
     temp_t_desc = team_entity.t_desc
     if temp_t_desc:
       setattr(response, 't_desc', temp_t_desc)
     
+    #if team photo exists, add it to response
     temp_t_photo = team_entity.t_photo
     if temp_t_photo:
       setattr(response, 't_photo', temp_t_photo)
+
+    #team capacity removed
     """
     temp_t_cap = team_entity.t_capacity
     if temp_t_cap:
@@ -226,8 +240,10 @@ class connectEDApi(remote.Service):
   #Returns: specified team history info
   #Called by: getTeamHistory() endpoint
   def _viewTeamHistory(self, request):
+    #get all teams past events
     past_events = EventHistory.query(EventHistory.teams == request.url_team_orig_name).fetch()
     
+    #place info from all history events in response
     response = TeamHistoryGetResponse()
     for event in past_events:
       response.event_ids.append(event.e_organizer+"_"+event.e_orig_title)
@@ -238,7 +254,8 @@ class connectEDApi(remote.Service):
 
 
   #***HELPER FUNCTION: GET TOP TEAMS***
-  #Description: retrieve a list of top team names and ids and hours
+  #Description: retrieve a list of top team names and ids and hours (top teams are designated by hours)
+  #Note: top teams is assigned in a cron job
   #Params: empty
   #Returns: list of top team names, ids, hours
   #Called by: getTopTeams() endpoint
@@ -281,6 +298,8 @@ class connectEDApi(remote.Service):
     origins.append([user_lat, user_lon])
     destinations = []
 
+    #make sets of 25 from all queried teams and calls google distance matrix
+    #THIS NEEDS TO BE REPLACED WITH CUSTUM DISTANCE FORMULA WITH LAT/LON 
     for team in teams:
       if matrixed_teams < 25 and total_matrixed_teams != num_teams-1:
         destinations.append([team.t_location.lat, team.t_location.lon])
@@ -300,6 +319,8 @@ class connectEDApi(remote.Service):
         matrixed_teams = 0
         destinations = []
         this_result = []
+        #this is put in so that more than 25 calls will never get made for cost issues
+        break
       
     response = GetProfileSuggestedTeams()
     team_index_list = []
@@ -332,7 +353,7 @@ class connectEDApi(remote.Service):
 
 
     
-
+  #Team roster info has been added to getTeam call
   '''
   #***HELPER FUNCTION: GET TEAM ROSTER***
   #Description: retrieve info for a specified team roster
@@ -359,7 +380,7 @@ class connectEDApi(remote.Service):
   #***HELPER FUNCTION: EDIT TEAM***
   #Description: make sure the logged in user is the organizer of the team and then edit the team
   #Params: request- PUT request sent to editTeam endpoint (team info to change)
-  #Returns: request- PUT request sent to editTeam endpoint (team info to change)
+  #Returns: none
   #Called by: editTeam endpoint
   @ndb.transactional(xg=True)
   def _editExistingTeam(self,request,user):
@@ -431,7 +452,7 @@ class connectEDApi(remote.Service):
   #***HELPER FUNCTION: REMOVE TEAM***
   #Description: remove a team entity if it exists
   #Params: request- DELETE request query string sent to deleteTeam() endpoint (url safe original team name)
-  #Returns: name of deleted team
+  #Returns: none
   #Called by: deleteTeam() endpoint
   @ndb.transactional(xg=True)
   def _removeTeam(self, request,user):
@@ -476,22 +497,29 @@ class connectEDApi(remote.Service):
   #Called by: registerForTeam() endpoint
   @ndb.transactional(xg=True)
   def _signUpTeam(self,request,user):
+    #save user email
     user_email = user.email()
+    #save team name with + instead of spaces for db lookup
     t_name = request.url_team_orig_name
     t_name = t_name.replace(" ", "+")
 
+    #get team entity
     team_entity = ndb.Key(Team, t_name).get()
     if not team_entity:
       raise endpoints.NotFoundException('could not find team')
+    #get profile entity
     profile_entity = ndb.Key(Profile, user_email).get()
     if not profile_entity:
       raise endpoints.NotFoundException('could not find profile')
+    #get roster entity
     roster_entity = T_Roster.query(ancestor=team_entity.key).get()
     if not roster_entity:
       raise endpoints.NotFoundException('could not find team roster')
+    #make sure user is not already signed up for team
     for member in roster_entity.members:
       if member == user_email:
         raise endpoints.BadRequestException('User already signed up for team')
+    #team cap removed
     """
     team_cap = team_entity.t_capacity
     if team_cap:
@@ -506,6 +534,7 @@ class connectEDApi(remote.Service):
         raise endpoints.BadRequestException('Cannot register for team: at capacity')
     else:
     """
+    #add user to different list depending on team privacy
     if team_entity.t_privacy == 'o':
       roster_entity.members.append(profile_entity.email)
       team_entity.t_members += 1
@@ -531,8 +560,11 @@ class connectEDApi(remote.Service):
             this_event_entity.put()
             this_event_roster.put()
     '''
+
+    #put all updated entities
     team_entity.put()
     roster_entity.put()
+    
     return EmptyResponse()
 
   #***HELPER FUNCTION: DEREGISTER LOGGED IN USER FROM TEAM***
@@ -2352,6 +2384,7 @@ class connectEDApi(remote.Service):
         matrixed_events = 0
         destinations = []
         this_result = []
+        break
 
     response = GetEventsInRadiusResponse()
     event_index_list = []
@@ -2461,6 +2494,7 @@ class connectEDApi(remote.Service):
         matrixed_events = 0
         destinations = []
         this_result = []
+        break
 
     response = GetEventsInRadiusByDateResponse()
     event_index_list = []
