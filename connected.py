@@ -1788,6 +1788,9 @@ class connectEDApi(remote.Service):
       elif event_entity.privacy == 'p':
         roster_entity.pending_teams.append('-')
 
+    #set registered users "event action"
+    roster_entity.user_action.append(getattr(request, 'user_action'))
+
     #get e_updates and add update
     if event_entity.privacy == 'o':
       updates_entity = E_Updates.query(ancestor=event_entity.key).get()

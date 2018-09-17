@@ -393,6 +393,12 @@
     },
     "ModelsEventUpdatesGetResponse": {
       "properties": {
+        "events": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "u_datetime": {
           "items": {
             "type": "string"
@@ -1233,6 +1239,12 @@
           {
             "in": "path",
             "name": "url_event_orig_name",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "user_action",
             "required": true,
             "type": "string"
           }

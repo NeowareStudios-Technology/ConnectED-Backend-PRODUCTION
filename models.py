@@ -499,7 +499,8 @@ QR_SIGNIN_REQUEST = endpoints.ResourceContainer(
 REGISTER_EVENT_REQUEST = endpoints.ResourceContainer(
     TeamRequest,
     e_organizer_email=messages.StringField(1, required=True),
-    url_event_orig_name=messages.StringField(2, required=True)
+    url_event_orig_name=messages.StringField(2, required=True),
+    user_action=messages.StringField(3, required=True)
 )
 ##################################################################################
 ##################           DATASTORE MODELS               ######################
@@ -603,6 +604,7 @@ class Event(ndb.Model):
 class E_Roster(ndb.Model):
     '''E_Roster -- E_Roster object (child of Event object)'''
     teams = ndb.StringProperty(repeated=True)
+    user_action = ndb.StringProperty(repeated=True)
     e_id = ndb.StringProperty()
     e_title = ndb.StringProperty()
     attendees = ndb.StringProperty(repeated=True)
