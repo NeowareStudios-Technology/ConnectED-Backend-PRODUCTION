@@ -761,6 +761,20 @@
       },
       "type": "object"
     },
+    "ModelsTeamAndActionRequest": {
+      "properties": {
+        "team": {
+          "type": "string"
+        },
+        "user_action": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "user_action"
+      ],
+      "type": "object"
+    },
     "ModelsTeamApproveRequest": {
       "properties": {
         "approve_list": {
@@ -907,14 +921,6 @@
             "type": "string"
           },
           "type": "array"
-        }
-      },
-      "type": "object"
-    },
-    "ModelsTeamRequest": {
-      "properties": {
-        "team": {
-          "type": "string"
         }
       },
       "type": "object"
@@ -1227,7 +1233,7 @@
             "in": "body",
             "name": "body",
             "schema": {
-              "$ref": "#/definitions/ModelsTeamRequest"
+              "$ref": "#/definitions/ModelsTeamAndActionRequest"
             }
           },
           {
@@ -1239,12 +1245,6 @@
           {
             "in": "path",
             "name": "url_event_orig_name",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "in": "query",
-            "name": "user_action",
             "required": true,
             "type": "string"
           }
