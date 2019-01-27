@@ -8,9 +8,6 @@ import urllib2
 import urllib
 import json
 #----------------------------------------------------------------------------
-#only radians from math
-from math import radians
-from cmath import sqrt, asin, cos, sin
 
 from datetime import datetime
 from datetime import timedelta
@@ -284,38 +281,14 @@ class connectEDApi(remote.Service):
     if not profile_entity:
       raise endpoints.NotFoundException('Profile not found')
     #get user location
-    userLatDeg = profile_entity.location.lat
-    userLonDeg = profile_entity.location.lon
+    user_lat = profile_entity.location.lat
+    user_lon = profile_entity.location.lon
 
     #get 50 teams
     #implement filter by state here when more users happen
     team_query = Team.query()
     teams = team_query.fetch(50)
 
-    #declare list to hold all distances from user to teams
-    distances_list = []
-
-    #iterate through all queried teams
-    for team in teams:
-      #get event lat and lon
-      teamLatDeg = team.t_location.lat
-      teamLonDeg = team.t_location.lon
-
-      distanceLon = radians(teamLonDeg - userLonDeg)
-      distanceLat = radians(teamLatDeg - userLatDeg)
-      userLat = radians(userLatDeg)
-      teamLat = radians(teamLatDeg)
-
-      a = sin(distanceLat/2)**2 + cos(userLat) * cos(teamLat) * sin(distanceLon/2)**2
-      
-
-      c = 2 * asin(sqrt(a)) 
-      r = 3956 # Radius of earth in kilometers. Use 3956 for miles
-      distance = c*r
-
-      distances_list.append(distance)
-
-    '''
     # ONLY 25 ORIGINS OR DESTINATIONS PER DISTANCE MATRIX REQUEST
     num_teams = len(teams)
     matrixed_teams = 0
@@ -348,28 +321,29 @@ class connectEDApi(remote.Service):
         this_result = []
         #this is put in so that more than 25 calls will never get made for cost issues
         break
-    '''
-
+      
     response = GetProfileSuggestedTeams()
     team_index_list = []
     distance_list = []
     count=0
     response_count = 0
     #get up to 20 events that are in radius set by user
-    for distance in distances_list:
+    for result in large_result_list:
       if response_count >= 20:
         break
-      if distance.real <= profile_entity.search_rad:
+      if result['distance']['value'] <= (profile_entity.search_rad * 1609.34):
         #vent_list.append(events[count])
         team_index_list.append(count)
-        distance_list.append(round(distance.real))
+        distance_list.append(result['distance']['value'])
         response_count += 1
       count += 1
     #sort events in user radius
     response_dict = dict(zip(team_index_list, distance_list))
     sorted_index_list = []
+    debug_list = []
     for key, value in sorted(response_dict.iteritems(), key=lambda (k,v): (v,k)):
       sorted_index_list.append(key)
+      debug_list.append(value)
 
     for team_index in sorted_index_list:
       response.team_names.append(teams[team_index].t_name)
@@ -2372,8 +2346,8 @@ class connectEDApi(remote.Service):
     prof_entity = ndb.Key(Profile, user.email()).get()
     if not prof_entity:
       raise endpoints.NotFoundException('Profile not found')
-    userLatDeg = prof_entity.location.lat
-    userLonDeg = prof_entity.location.lon
+    user_lat = prof_entity.location.lat
+    user_lon = prof_entity.location.lon
 
     #get 100 events
     #implement filter by state here when more users happen
@@ -2385,31 +2359,6 @@ class connectEDApi(remote.Service):
       event_query = event_query.filter(Event.env.IN(['i', 'b']))
     events = event_query.fetch(100)
 
-    #declare list to hold all distances from user to events
-    distances_list = []
-
-    #iterate through all queried events
-    for event in events:
-      #get event lat and lon
-      eventLatDeg = event.e_location.lat
-      eventLonDeg = event.e_location.lon
-
-      distanceLon = radians(eventLonDeg - userLonDeg)
-      distanceLat = radians(eventLatDeg - userLatDeg)
-      userLat = radians(userLatDeg)
-      eventLat = radians(eventLatDeg)
-
-      a = sin(distanceLat/2)**2 + cos(userLat) * cos(eventLat) * sin(distanceLon/2)**2
-      
-
-      c = 2 * asin(sqrt(a)) 
-      r = 3956 # Radius of earth in kilometers. Use 3956 for miles
-      distance = c*r
-
-      distances_list.append(distance)
-
-
-    '''
     # ONLY 25 ORIGINS OR DESTINATIONS PER DISTANCE MATRIX REQUEST
     num_events = len(events)
     matrixed_events = 0
@@ -2439,7 +2388,6 @@ class connectEDApi(remote.Service):
         destinations = []
         this_result = []
         break
-    '''
 
     response = GetEventsInRadiusResponse()
     event_index_list = []
@@ -2447,12 +2395,13 @@ class connectEDApi(remote.Service):
     count=0
     response_count = 0
     #get up to 50 events that are in radius set by user
-    for distance in distances_list:
+    for result in large_result_list:
       if response_count >= 50:
         break
-      if distance.real <= prof_entity.search_rad:
+      if result['distance']['value'] <= (prof_entity.search_rad * 1609.34):
+        #vent_list.append(events[count])
         event_index_list.append(count)
-        distance_list.append(distance.real)
+        distance_list.append(result['distance']['value'])
         response_count += 1
       count += 1
     #sort events in user radius
@@ -2462,7 +2411,6 @@ class connectEDApi(remote.Service):
     for key, value in sorted(response_dict.iteritems(), key=lambda (k,v): (v,k)):
       sorted_index_list.append(key)
       new_distance_list.append(value)
-    
     
     #get events within user radius that also have matching tags
     break_check = 0
@@ -2481,7 +2429,7 @@ class connectEDApi(remote.Service):
         for interest in prof_entity.interests:
           if tag == interest:
             events_matching_tags_radius.append(events[this_index])
-            response.distances.append(round(new_distance_list[final_count]))
+            response.distances.append(new_distance_list[d_pop_count]/1609.34)
             final_count += 1
             break_check =1
             break
@@ -2495,7 +2443,7 @@ class connectEDApi(remote.Service):
           break
         if events[this_event_index] not in events_matching_tags_radius:
           events_matching_tags_radius.append(events[this_event_index])
-          response.distances.append(round(new_distance_list[final_count2]))
+          response.distances.append(new_distance_list[final_count2] / 1609.34)
           final_count += 1
         final_count2 += 1
     
@@ -2513,42 +2461,14 @@ class connectEDApi(remote.Service):
   #Called by: getEventsInRadiusByDate() endpoint
   def _getRadiusEventsByDate(self, request,user):
     prof_entity = ndb.Key(Profile, user.email()).get()
+    user_lat = prof_entity.location.lat
+    user_lon = prof_entity.location.lon
 
     #get 100 events
     #implement filter by state here when more users happen
     event_query = Event.query()
     events = event_query.fetch(100)
 
-    #get lat and lon for user
-    userLatDeg = prof_entity.location.lat
-    userLonDeg = prof_entity.location.lon
-
-    #declare list to hold all distances from user to events
-    distances_list = []
-
-    #iterate through all queried events
-    for event in events:
-      #get event lat and lon
-      eventLatDeg = event.e_location.lat
-      eventLonDeg = event.e_location.lon
-
-      distanceLon = radians(eventLonDeg - userLonDeg)
-      distanceLat = radians(eventLatDeg - userLatDeg)
-      userLat = radians(userLatDeg)
-      eventLat = radians(eventLatDeg)
-
-      a = sin(distanceLat/2)**2 + cos(userLat) * cos(eventLat) * sin(distanceLon/2)**2
-      
-
-      c = 2 * asin(sqrt(a)) 
-      r = 3956 # Radius of earth in kilometers. Use 3956 for miles
-      distance = c*r
-
-      distances_list.append(distance)
-  
-
-
-    """
     # ONLY 25 ORIGINS OR DESTINATIONS PER DISTANCE MATRIX REQUEST
     num_events = len(events)
     matrixed_events = 0
@@ -2578,17 +2498,17 @@ class connectEDApi(remote.Service):
         destinations = []
         this_result = []
         break
-    """
 
+    response = GetEventsInRadiusByDateResponse()
     event_index_list = []
     date_list = []
     count=0
     response_count = 0
     #get up to 50 events that are in radius set by user
-    for distance in distances_list:
+    for result in large_result_list:
       if response_count >= 50:
         break
-      if distance.real <= prof_entity.search_rad:
+      if result['distance']['value'] <= (prof_entity.search_rad * 1609.34):
         event_index_list.append(count)
         date_list.append(events[count].sched[0].date_start)
         response_count += 1
@@ -2602,7 +2522,7 @@ class connectEDApi(remote.Service):
       sorted_index_list.append(key)
       sorted_date_list.append(value)
     
-    response = GetEventsInRadiusByDateResponse()
+    
     for index in sorted_index_list:
       response.events.append(events[index].e_organizer+'_'+events[index].e_orig_title)
 
@@ -2897,8 +2817,10 @@ class connectEDApi(remote.Service):
     profile_entity = ndb.Key(Profile, user.email()).get()
     if not profile_entity:
       raise endpoints.NotFoundException('User profile not found')
-    userLatDeg = profile_entity.location.lat
-    userLonDeg = profile_entity.location.lon
+    user_lat = profile_entity.location.lat
+    user_lon = profile_entity.location.lon
+    #get user search radius
+    search_rad = profile_entity.search_rad
     
     #get list of separated search terms
     search_terms = request.search_term
@@ -2931,30 +2853,6 @@ class connectEDApi(remote.Service):
         if event not in large_event_list:
           large_event_list.append(event)
 
-    #declare list to hold all distances from user to events
-    distances_list = []
-
-    #iterate through all queried events
-    for event in large_event_list:
-      #get event lat and lon
-      eventLatDeg = event.e_location.lat
-      eventLonDeg = event.e_location.lon
-
-      distanceLon = radians(eventLonDeg - userLonDeg)
-      distanceLat = radians(eventLatDeg - userLatDeg)
-      userLat = radians(userLatDeg)
-      eventLat = radians(eventLatDeg)
-
-      a = sin(distanceLat/2)**2 + cos(userLat) * cos(eventLat) * sin(distanceLon/2)**2
-      
-
-      c = 2 * asin(sqrt(a)) 
-      r = 3956 # Radius of earth in kilometers. Use 3956 for miles
-      distance = c*r
-
-      distances_list.append(distance)
-
-    '''
     # ONLY 25 ORIGINS OR DESTINATIONS PER DISTANCE MATRIX REQUEST
     num_events = len(large_event_list)
     matrixed_events = 0
@@ -2983,20 +2881,19 @@ class connectEDApi(remote.Service):
         matrixed_events = 0
         destinations = []
         this_result = []
-    '''
 
     event_index_list = []
     distance_list = []
     count=0
     response_count = 0
     #get up to 50 events that are in radius set by user
-    for distance in distances_list: 
+    for result in large_result_list: 
       if response_count >= 50:
         break
-      if distance.real <= profile_entity.search_rad:
+      if result['distance']['value'] <= (profile_entity.search_rad * 1609.34):
         #vent_list.append(events[count])
         event_index_list.append(count)
-        distance_list.append(round(distance.real))
+        distance_list.append(result['distance']['value'])
         response_count += 1
       count += 1
 
@@ -3029,7 +2926,7 @@ class connectEDApi(remote.Service):
           break
       if date_check == 0:
         response.event_dates.append('-')
-      response.distances.append(new_distance_list[x])
+      response.distances.append(new_distance_list[x] / 1609.34)
       final_count += 1
     
     return response
@@ -3045,8 +2942,8 @@ class connectEDApi(remote.Service):
     profile_entity = ndb.Key(Profile, user.email()).get()
     if not profile_entity:
       raise endpoints.UnauthorizedException('Could not find profile')
-    userLatDeg = profile_entity.location.lat
-    userLonDeg = profile_entity.location.lon
+    user_lat = profile_entity.location.lat
+    user_lon = profile_entity.location.lon
     #get list of separated search terms
     search_term = request.search_term
     search_terms = search_term.split()
@@ -3066,7 +2963,28 @@ class connectEDApi(remote.Service):
     full_match = ndb.Key(Team, search_term).get()
     if full_match:
       large_team_list.append(full_match)
-     
+      '''
+      #get distance for fully matching team
+      origins = []
+      destinations = []
+      origins.append([user_lat, user_lon])
+      destinations.append([full_match.t_location.lat, full_match.t_location.lon])
+      matrix_result = gmaps.distance_matrix(origins, destinations, mode="driving",
+                                            language="en",
+                                            units="imperial")
+      this_result = matrix_result['rows'][0]['elements']
+      distance = this_result[0]['distance']['value']
+      distance = distance/1609.34
+      distance = round(distance,2)
+
+      #fill out response
+      response.name.append(full_match.t_name)
+      response.t_id.append(full_match.t_orig_name)
+      response.pic.append(full_match.t_photo)
+      response.distance.append(distance)
+
+      return response
+      '''
     
     #for each search term
     for term in search_terms:
@@ -3076,30 +2994,6 @@ class connectEDApi(remote.Service):
         if this_team not in large_team_list:
           large_team_list.append(this_team)
 
-    #declare list to hold all distances from user to events
-    distances_list = []
-
-    #iterate through all queried teams
-    for team in large_team_list:
-      #get event lat and lon
-      teamLatDeg = team.t_location.lat
-      teamLonDeg = team.t_location.lon
-
-      distanceLon = radians(teamLonDeg - userLonDeg)
-      distanceLat = radians(teamLatDeg - userLatDeg)
-      userLat = radians(userLatDeg)
-      teamLat = radians(teamLatDeg)
-
-      a = sin(distanceLat/2)**2 + cos(userLat) * cos(teamLat) * sin(distanceLon/2)**2
-      
-
-      c = 2 * asin(sqrt(a)) 
-      r = 3956 # Radius of earth in kilometers. Use 3956 for miles
-      distance = c*r
-
-      distances_list.append(distance)
-
-    '''
     # ONLY 25 ORIGINS OR DESTINATIONS PER DISTANCE MATRIX REQUEST
     num_teams = len(large_team_list)
     matrixed_teams = 0
@@ -3128,19 +3022,19 @@ class connectEDApi(remote.Service):
         matrixed_teams = 0
         destinations = []
         this_result = []
-    '''
 
     team_index_list = []
     distance_list = []
     count=0
     response_count = 0
     #get up to 20 teams that are in radius set by user
-    for distance in distances_list: 
+    for result in large_result_list: 
       if response_count >= 20:
         break
-      if distance.real <= profile_entity.search_rad:
+      if result['distance']['value'] <= (profile_entity.search_rad * 1609.34):
+        #vent_list.append(teams[count])
         team_index_list.append(count)
-        distance_list.append(round(distance.real))
+        distance_list.append(result['distance']['value'])
         response_count += 1
       count += 1
 
@@ -3162,7 +3056,7 @@ class connectEDApi(remote.Service):
       response.name.append(large_team_list[sorted_index_list[x]].t_name)
       response.t_id.append(large_team_list[sorted_index_list[x]].t_orig_name)
       response.pic.append(large_team_list[sorted_index_list[x]].t_photo)
-      response.distance.append(new_distance_list[x])
+      response.distance.append(new_distance_list[x] / 1609.34)
     return response
       
 
@@ -3386,7 +3280,7 @@ class connectEDApi(remote.Service):
     user = self._authenticateUser()
     return self._viewTeam(request,user)
 
-  #****ENDPOINT: GET TEAM HISTORY***
+  #****ENDPOINT: GET TEAM***
   #-accepts: original team name
   #-returns: all team info
   @endpoints.method(TEAM_DEL_REQUEST, TeamHistoryGetResponse, 
