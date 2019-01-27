@@ -373,9 +373,8 @@ class EventApproveRequest(messages.Message):
 class TeamApproveRequest(messages.Message):
     approve_list = messages.StringField(1, repeated=True)
 
-class TeamAndActionRequest(messages.Message):
+class TeamRequest(messages.Message):
     team = messages.StringField(1)
-    user_action = messages.StringField(2, required=True)
 
 class EmptyResponse(messages.Message):
     nothing = messages.IntegerField(1)
@@ -498,9 +497,10 @@ QR_SIGNIN_REQUEST = endpoints.ResourceContainer(
 )
 
 REGISTER_EVENT_REQUEST = endpoints.ResourceContainer(
-    TeamAndActionRequest,
+    TeamRequest,
     e_organizer_email=messages.StringField(1, required=True),
-    url_event_orig_name=messages.StringField(2, required=True)
+    url_event_orig_name=messages.StringField(2, required=True),
+    user_action=messages.StringField(3, required=True)
 )
 ##################################################################################
 ##################           DATASTORE MODELS               ######################
