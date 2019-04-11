@@ -1,4 +1,3 @@
-
 security:
 - firebase: []
 
@@ -10,4 +9,6 @@ securityDefinitions:
     x-google-issuer: 'https://securetoken.google.com/fleet-fortress-211105'
     x-google-jwks_uri: 'https://www.googleapis.com/service_accounts/v1/metadata/x509/securetoken@system.gserviceaccount.com'
     x-google-audiences: 'connected-dev-214119'
+
+
 

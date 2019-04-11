@@ -515,6 +515,15 @@ definitions:
           type: string
         type: array
     type: object
+  ModelsTeamAndActionRequest:
+    properties:
+      team:
+        type: string
+      user_action:
+        type: string
+    required:
+      - user_action
+    type: object
   ModelsTeamApproveRequest:
     properties:
       approve_list:
@@ -614,11 +623,6 @@ definitions:
         items:
           type: string
         type: array
-    type: object
-  ModelsTeamRequest:
-    properties:
-      team:
-        type: string
     type: object
   ModelsTeamSearchResponse:
     properties:
@@ -819,17 +823,13 @@ paths:
         - in: body
           name: body
           schema:
-            $ref: '#/definitions/ModelsTeamRequest'
+            $ref: '#/definitions/ModelsTeamAndActionRequest'
         - in: path
           name: e_organizer_email
           required: true
           type: string
         - in: path
           name: url_event_orig_name
-          required: true
-          type: string
-        - in: query
-          name: user_action
           required: true
           type: string
       responses:
