@@ -26,13 +26,13 @@
     },
     "ModelsEventApproveRequest": {
       "properties": {
-        "approve_list": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
+        "pending_attendee": {
+          "type": "string"
         }
       },
+      "required": [
+        "pending_attendee"
+      ],
       "type": "object"
     },
     "ModelsEventCreateForm": {
@@ -1105,7 +1105,7 @@
         }
       }
     },
-    "/connected/v1/events/{e_organizer_email}/{url_event_orig_name}/approve/{pending_attendee}": {
+    "/connected/v1/events/{e_organizer_email}/{url_event_orig_name}/approve": {
       "put": {
         "operationId": "connectEDApi_eventApprovePending",
         "parameters": [
@@ -1125,12 +1125,6 @@
           {
             "in": "path",
             "name": "url_event_orig_name",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "in": "path",
-            "name": "pending_attendee",
             "required": true,
             "type": "string"
           }
@@ -1165,12 +1159,6 @@
           {
             "in": "path",
             "name": "url_event_orig_name",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "in": "query",
-            "name": "pending_attendee",
             "required": true,
             "type": "string"
           }

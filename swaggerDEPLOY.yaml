@@ -17,10 +17,10 @@ definitions:
     type: object
   ModelsEventApproveRequest:
     properties:
-      approve_list:
-        items:
-          type: string
-        type: array
+      pending_attendee:
+        type: string
+    required:
+      - pending_attendee
     type: object
   ModelsEventCreateForm:
     properties:
@@ -739,7 +739,7 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsEventGetResponse'
-  '/connected/v1/events/{e_organizer_email}/{url_event_orig_name}/approve/{pending_attendee}':
+  '/connected/v1/events/{e_organizer_email}/{url_event_orig_name}/approve':
     put:
       operationId: connectEDApi_eventApprovePending
       parameters:
@@ -753,10 +753,6 @@ paths:
           type: string
         - in: path
           name: url_event_orig_name
-          required: true
-          type: string
-        - in: path
-          name: pending_attendee
           required: true
           type: string
       responses:
@@ -778,10 +774,6 @@ paths:
           type: string
         - in: path
           name: url_event_orig_name
-          required: true
-          type: string
-        - in: query
-          name: pending_attendee
           required: true
           type: string
       responses:
@@ -1199,6 +1191,7 @@ schemes:
   - https
 security:
 - firebase: []
+
 securityDefinitions:
   firebase:
     authorizationUrl: ''

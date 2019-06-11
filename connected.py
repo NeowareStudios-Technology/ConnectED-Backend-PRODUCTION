@@ -2118,7 +2118,7 @@ class connectEDApi(remote.Service):
   '''
   #***HELPER FUNCTION: APPROVE PENDING EVENT ATTENDEES***
   #Description: approve pending event attendees (only event organizer)
-  #Params: request- PUT request sent to eventApprovePending() endpoint (url safe original event name, event creator email, list of approvals)
+  #Params: request- PUT request sent to eventApprovePending() endpoint (url safe original event name, event creator email, approved user)
   #Returns: event name
   #Called by: eventApprovePending() endpoint
   @ndb.transactional(xg=True)
@@ -2147,6 +2147,11 @@ class connectEDApi(remote.Service):
       if event_entity.num_attendees >= event_entity.capacity:
         raise endpoints.BadRequestException('Event is already at capacity')
 
+    #get event updates entity
+    e_updates_entity = E_Updates.query(ancestor=event_entity.key).get()
+    if not e_updates_entity:
+      raise endpoints.NotFoundException('Event updates not found')
+
     #get event roster entity
     e_roster_entity = E_Roster.query(ancestor=event_entity.key).get()
     if not e_roster_entity:
@@ -2167,22 +2172,14 @@ class connectEDApi(remote.Service):
         event_entity.num_pending_attendees-=1
         event_entity.num_attendees+=1
 
-        #get event updates entity
-        e_updates_entity = E_Updates.query(ancestor=event_entity.key).get()
-        if not e_updates_entity:
-          raise endpoints.NotFoundException('Event updates not found')
 
         update = attendee_entity.first_name+' '+attendee_entity.last_name+' has joined'
         self._modUpdates(update, e_updates_entity)
      
-        e_updates_entity.put()
-        e_roster_entity.put()
-        event_entity.put()
-
       else:
         raise endpoints.NotFoundException('Pending attendee not found')
     else:
-        raise endpoints.NotFoundException('Attendee not found in event\'s pending attendees')
+      raise endpoints.NotFoundException(pending_attendee + ' not found in event\'s pending attendees')
 
     # for attendee in getattr(request, 'approve_list'):
     #   if attendee in e_roster_entity.pending_attendees:
@@ -2208,8 +2205,12 @@ class connectEDApi(remote.Service):
       # e_updates_entity.put()
       # e_roster_entity.put()
       # event_entity.put()
+    e_updates_entity.put()
+    e_roster_entity.put()
+    event_entity.put()
 
     return EmptyResponse()
+    # return EventRosterGetResponse(e_roster_entity)
 
   #***HELPER FUNCTION: DENY PENDING EVENT ATTENDEES***
   #Description: deny pending event attendees (only event organizer)
@@ -3550,10 +3551,10 @@ class connectEDApi(remote.Service):
     return self._searchTeam(request, user)
   
   #****ENDPOINT: APPROVE PENDING EVENT ATTENDEES***
-  #-accepts: event name, event organizer email
+  #-accepts: event name, event organizer email, approved email/user
   #-returns: none
   @endpoints.method(EVENT_APPROVE_REQUEST, EmptyResponse,
-  path='events/{e_organizer_email}/{url_event_orig_name}/approve/{pending_attendee}', http_method='PUT', name='eventApprovePending')
+  path='events/{e_organizer_email}/{url_event_orig_name}/approve', http_method='PUT', name='eventApprovePending')
   def eventApprovePending(self, request):
     user = self._authenticateUser()
     return self._eApprovePending(request, user)
