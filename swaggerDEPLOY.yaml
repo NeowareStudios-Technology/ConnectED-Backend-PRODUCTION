@@ -661,8 +661,6 @@ definitions:
         type: array
     type: object
 host: connected-dev-214119.appspot.com
-security:
-- firebase: []
 info:
   description: connectED API v1.
   title: connected
@@ -741,7 +739,7 @@ paths:
           description: A successful response
           schema:
             $ref: '#/definitions/ModelsEventGetResponse'
-  '/connected/v1/events/{e_organizer_email}/{url_event_orig_name}/approve':
+  '/connected/v1/events/{e_organizer_email}/{url_event_orig_name}/approve/{pending_attendee}':
     put:
       operationId: connectEDApi_eventApprovePending
       parameters:
@@ -755,6 +753,10 @@ paths:
           type: string
         - in: path
           name: url_event_orig_name
+          required: true
+          type: string
+        - in: path
+          name: pending_attendee
           required: true
           type: string
       responses:
@@ -776,6 +778,10 @@ paths:
           type: string
         - in: path
           name: url_event_orig_name
+          required: true
+          type: string
+        - in: query
+          name: pending_attendee
           required: true
           type: string
       responses:
@@ -1191,12 +1197,14 @@ produces:
   - application/json
 schemes:
   - https
+security:
+- firebase: []
 securityDefinitions:
   firebase:
     authorizationUrl: ''
     flow: implicit
     type: oauth2
-    x-google-issuer: 'https://securetoken.google.com/connected-dev-214119'
+    x-google-issuer: 'https://securetoken.google.com/fleet-fortress-211105'
     x-google-jwks_uri: 'https://www.googleapis.com/service_accounts/v1/metadata/x509/securetoken@system.gserviceaccount.com'
     x-google-audiences: 'connected-dev-214119'
 swagger: '2.0'
