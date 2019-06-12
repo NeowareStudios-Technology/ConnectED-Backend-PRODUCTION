@@ -2140,7 +2140,7 @@ class connectEDApi(remote.Service):
 
     #check that user is event organizer
     if user_email != event_entity.e_organizer:
-      raise endpoints.UnauthorizedException('User must be event organizer')
+      raise endpoints.UnauthorizedException('User must be the event organizer')
 
     #if attendees is at capacity, return error
     if event_entity.capacity:
@@ -2160,24 +2160,26 @@ class connectEDApi(remote.Service):
     # Verify attendee is in pending list for event before approving
     pending_attendee = request.pending_attendee
     if pending_attendee in e_roster_entity.pending_attendees:
+      # Get attendee Profile info for update message
       attendee_entity = ndb.Key(Profile, pending_attendee).get()
       if attendee_entity:
-        #get index of attendee in pending list
+        #get index to find corresponding team
         index = e_roster_entity.pending_attendees.index(pending_attendee)
         #get team associated with attendee and pop from pending list
         this_team = e_roster_entity.pending_teams.pop(index)
         e_roster_entity.teams.append(this_team)
+        # remove attendee from pending and move to event attendees
         e_roster_entity.pending_attendees.remove(pending_attendee)
         e_roster_entity.attendees.append(pending_attendee)
+        # edit counts attending
         event_entity.num_pending_attendees-=1
         event_entity.num_attendees+=1
-
 
         update = attendee_entity.first_name+' '+attendee_entity.last_name+' has joined'
         self._modUpdates(update, e_updates_entity)
      
       else:
-        raise endpoints.NotFoundException('Pending attendee not found')
+        raise endpoints.NotFoundException('Pending attendee must be a user')
     else:
       raise endpoints.NotFoundException(pending_attendee + ' not found in event\'s pending attendees')
 
@@ -2214,7 +2216,7 @@ class connectEDApi(remote.Service):
 
   #***HELPER FUNCTION: DENY PENDING EVENT ATTENDEES***
   #Description: deny pending event attendees (only event organizer)
-  #Params: request- PUT request sent to eventDenyPending() endpoint (url safe original event name, event creator email, list of denials)
+  #Params: request- PUT request sent to eventDenyPending() endpoint (url safe original event name, event creator email, denied attendee email)
   #Returns: none
   #Called by: eventDenyPending() endpoint
   @ndb.transactional(xg=True)
@@ -2236,26 +2238,32 @@ class connectEDApi(remote.Service):
 
     #check that user is event organizer
     if user_email != event_entity.e_organizer:
-      raise endpoints.UnauthorizedException('User must be event organizer')
+      raise endpoints.UnauthorizedException('User must be the event organizer')
 
     #get event roster entity
     e_roster_entity = E_Roster.query(ancestor=event_entity.key).get()
     if not e_roster_entity:
       raise endpoints.NotFoundException('Event roster not found')
 
-    #deny member 
-    for member in getattr(request, 'approve_list'):
-      if member in e_roster_entity.pending_attendees:
-        #get index to find corresponding team
-        index = e_roster_entity.pending_attendees.index(member)
-        #remove attendee from pending
-        e_roster_entity.pending_attendees.remove(member)
-        event_entity.num_pending_attendees-=1
-        #remove team from pending
-        removed_team = e_roster_entity.pending_teams.pop(index)
-        if removed_team != '-':
-          event_entity.num_pending_teams -= 1
+    #deny member
+    pending_attendee = request.pending_attendee
+    if pending_attendee in e_roster_entity.pending_attendees:
+      #get index to find corresponding team
+      index = e_roster_entity.pending_attendees.index(pending_attendee)
+      #get team associated with attendee and pop from pending list
+      removed_team = e_roster_entity.pending_teams.pop(index)
+      
+      # remove attendee from pending
+      e_roster_entity.pending_attendees.remove(pending_attendee)
+      
+      # edit counts attending
+      event_entity.num_pending_attendees-=1
+      if removed_team != '-':
+        event_entity.num_pending_teams -= 1
 
+    else:
+      raise endpoints.NotFoundException('Pending attendee must be a user')
+    
     e_roster_entity.put()
     event_entity.put()
     
@@ -3621,19 +3629,12 @@ class connectEDApi(remote.Service):
   def topteams(self, request):
     return self._createTopTeams()
   """
-  
-  #  #****ENDPOINT: test***
-  # @endpoints.method(EMPTY_REQUEST, GenericOneLiner,
-  # path='test', http_method='GET', name='test')
-  # def test(self, request):
-  #   return_string = 'Connected API test successful'
-  #   return GenericOneLiner(response = return_string)
+
 
   ##################################################################################
   ##################           STATIC FUNCTIONS               ######################
   ##################################################################################
 
-  
   #***STATIC FUNCTION: CRON JOB FOR CLEANING EVENTS***
   #Description: called by cron job every 2 hours to clean events (ie. delete past events and convert to history events)
   @staticmethod

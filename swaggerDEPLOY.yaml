@@ -1191,7 +1191,6 @@ schemes:
   - https
 security:
 - firebase: []
-
 securityDefinitions:
   firebase:
     authorizationUrl: ''

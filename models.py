@@ -416,7 +416,7 @@ EVENT_DEL_REQUEST = endpoints.ResourceContainer(
     url_event_orig_name=messages.StringField(2, required=True)
 )
 
-#Resource container for approving pending event attendees (gets email)
+#Resource container for approving or denying pending event attendees (gets email)
 EVENT_APPROVE_REQUEST = endpoints.ResourceContainer(
     EventApproveRequest,
     e_organizer_email=messages.StringField(1),
