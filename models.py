@@ -98,7 +98,6 @@ COMPLAINT_LIST = ['placeholder','placeholder2']
 
 ##################################################################################
 ##################         PROTORPC MESSAGE MODELS          ######################
-##################################################################################
 
 #Team related messages------------------------------------------------------------
 class TeamCreateForm(messages.Message):
@@ -368,7 +367,7 @@ class TeamSearchResponse(messages.Message):
 
 
 class EventApproveRequest(messages.Message):
-    approve_list = messages.StringField(1, repeated=True)
+    pending_attendee = messages.StringField(1, required=True)
 
 class TeamApproveRequest(messages.Message):
     approve_list = messages.StringField(1, repeated=True)
@@ -417,11 +416,11 @@ EVENT_DEL_REQUEST = endpoints.ResourceContainer(
     url_event_orig_name=messages.StringField(2, required=True)
 )
 
-#Resource container for approving pending event attendees (gets email)
+#Resource container for approving or denying pending event attendees (gets email)
 EVENT_APPROVE_REQUEST = endpoints.ResourceContainer(
     EventApproveRequest,
     e_organizer_email=messages.StringField(1),
-    url_event_orig_name=messages.StringField(2, required=True), 
+    url_event_orig_name=messages.StringField(2, required=True)
 )
 
 #Resource container for adding leaders to event (needed for url)

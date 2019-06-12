@@ -26,13 +26,13 @@
     },
     "ModelsEventApproveRequest": {
       "properties": {
-        "approve_list": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
+        "pending_attendee": {
+          "type": "string"
         }
       },
+      "required": [
+        "pending_attendee"
+      ],
       "type": "object"
     },
     "ModelsEventCreateForm": {

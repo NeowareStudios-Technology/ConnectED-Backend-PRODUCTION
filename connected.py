@@ -113,6 +113,7 @@ class connectEDApi(remote.Service):
       raise endpoints.UnauthorizedException('Authorization required')
     return user
 
+
   #***HELPER FUNCTION: CREATE NEW TEAM***
   #Description: create a new team if one does not already exist
   #Params: request- POST request sent to createTeam() endpoint (team info)
@@ -236,7 +237,7 @@ class connectEDApi(remote.Service):
     """
     return response
 
-  
+
   #***HELPER FUNCTION: GET TEAM HISTORY***
   #Description: retrieve hstory for a specified team
   #Params: request- GET request url portion sent to getTeamHistory() endpoint (url safe original team name)
@@ -255,7 +256,6 @@ class connectEDApi(remote.Service):
     return response
 
 
-
   #***HELPER FUNCTION: GET TOP TEAMS***
   #Description: retrieve a list of top team names and ids and hours (top teams are designated by hours)
   #Note: top teams is assigned in a cron job
@@ -271,6 +271,7 @@ class connectEDApi(remote.Service):
     )
 
     return response
+
 
   #***HELPER FUNCTION: GET SUGGESTED TEAMS***
   #Description: retrieve a list of suggested team names and ids
@@ -378,7 +379,6 @@ class connectEDApi(remote.Service):
     return response
 
 
-    
   #Team roster info has been added to getTeam call
   '''
   #***HELPER FUNCTION: GET TEAM ROSTER***
@@ -402,7 +402,7 @@ class connectEDApi(remote.Service):
     return response
   '''
   
-  
+
   #***HELPER FUNCTION: EDIT TEAM***
   #Description: make sure the logged in user is the organizer of the team and then edit the team
   #Params: request- PUT request sent to editTeam endpoint (team info to change)
@@ -593,6 +593,7 @@ class connectEDApi(remote.Service):
     
     return EmptyResponse()
 
+
   #***HELPER FUNCTION: DEREGISTER LOGGED IN USER FROM TEAM***
   #Description: deregisters user for team
   #Params: request- DELETE request sent to deregisterForTeam() endpoint (original team name)
@@ -645,6 +646,7 @@ class connectEDApi(remote.Service):
     team_entity.put()
     roster_entity.put()
     return EmptyResponse()
+
 
   #***HELPER FUNCTION: APPROVE PENDING TEAM MEMBERS***
   #Description: approve pending team members (only team organizer)
@@ -709,6 +711,7 @@ class connectEDApi(remote.Service):
     
     return EmptyResponse()
 
+
   #***HELPER FUNCTION: DENY PENDING TEAM MEMBERS***
   #Description: deny pending team members (only team organizer)
   #Params: request- PUT request sent to teamDenyPending() endpoint (team name, list of approvals)
@@ -770,6 +773,7 @@ class connectEDApi(remote.Service):
     
     return EmptyResponse()
 
+
   #***HELPER FUNCTION: CREATE NEW PROFILE***
   #Description: create a new profile if one does not already exist
   #Params: request- POST request sent to createProfile() endpoint (profile info)
@@ -813,6 +817,7 @@ class connectEDApi(remote.Service):
 
       return EmptyResponse()
 
+
   #***HELPER FUNCTION: GET PROFILE***
   #Description: retrieve info for a specified profile
   #Params: request- GET request url portion sent to getProfile() endpoint (email of profile to get)
@@ -836,6 +841,7 @@ class connectEDApi(remote.Service):
       hours = profile_entity.hours
     )
     return response
+
 
   #***HELPER FUNCTION: GET PROFILE***
   #Description: retrieve info for a specified profile
@@ -930,14 +936,6 @@ class connectEDApi(remote.Service):
     return response
 
 
-
-
-
-  
-
-   
-    
-
   #***HELPER FUNCTION: GET PROFILE EVENTS***
   #Description: retrieve event info for a profile
   #Params: request- GET request url portion sent to getProfileEvents() endpoint 
@@ -955,7 +953,7 @@ class connectEDApi(remote.Service):
       created_events = profile_entity.created_events
     )
     #append any currently attending events to completed events
-    response.completed_events +=profile_entity.attended_events
+    response.completed_events += profile_entity.attended_events
     
     #get all registered future events and save to reponse
     event_roster_list = E_Roster.query(E_Roster.attendees == profile_entity.email)
@@ -2120,7 +2118,7 @@ class connectEDApi(remote.Service):
   '''
   #***HELPER FUNCTION: APPROVE PENDING EVENT ATTENDEES***
   #Description: approve pending event attendees (only event organizer)
-  #Params: request- PUT request sent to eventApprovePending() endpoint (url safe original event name, event creator email, list of approvals)
+  #Params: request- PUT request sent to eventApprovePending() endpoint (url safe original event name, event creator email, approved user)
   #Returns: event name
   #Called by: eventApprovePending() endpoint
   @ndb.transactional(xg=True)
@@ -2142,54 +2140,83 @@ class connectEDApi(remote.Service):
 
     #check that user is event organizer
     if user_email != event_entity.e_organizer:
-      raise endpoints.UnauthorizedException('User must be event organizer')
+      raise endpoints.UnauthorizedException('User must be the event organizer')
 
     #if attendees is at capacity, return error
     if event_entity.capacity:
       if event_entity.num_attendees >= event_entity.capacity:
         raise endpoints.BadRequestException('Event is already at capacity')
 
-    #get event roster entity
-    e_roster_entity = E_Roster.query(ancestor=event_entity.key).get()
-    if not e_roster_entity:
-      raise endpoints.NotFoundException('Event roster not found')
-
     #get event updates entity
     e_updates_entity = E_Updates.query(ancestor=event_entity.key).get()
     if not e_updates_entity:
       raise endpoints.NotFoundException('Event updates not found')
 
-    #approve member while checking for capacity
-    for attendee in getattr(request, 'approve_list'):
-      if attendee in e_roster_entity.pending_attendees:
-        if event_entity.capacity:
-          if event_entity.num_attendees < event_entity.capacity:
-            attendee_entity = ndb.Key(Profile, attendee).get()
-            if attendee_entity:
-              #get index of attendee in pending list
-              index = e_roster_entity.pending_attendees.index(attendee)
-              #get team associated with attendee and pop from pending list
-              this_team = e_roster_entity.pending_teams.pop(index)
-              e_roster_entity.teams.append(this_team)
-              e_roster_entity.pending_attendees.remove(attendee)
-              e_roster_entity.attendees.append(attendee)
-              event_entity.num_pending_attendees-=1
-              event_entity.num_attendees+=1
+    #get event roster entity
+    e_roster_entity = E_Roster.query(ancestor=event_entity.key).get()
+    if not e_roster_entity:
+      raise endpoints.NotFoundException('Event roster not found')
 
-              update =  attendee_entity.first_name+' '+attendee_entity.last_name+' has joined'
-              self._modUpdates(update, e_updates_entity)
-        else:
-          raise endpoints.BadRequestException('Event does not have capacity for all requested attendee approvals')
+    # Verify attendee is in pending list for event before approving
+    pending_attendee = request.pending_attendee
+    if pending_attendee in e_roster_entity.pending_attendees:
+      # Get attendee Profile info for update message
+      attendee_entity = ndb.Key(Profile, pending_attendee).get()
+      if attendee_entity:
+        #get index to find corresponding team
+        index = e_roster_entity.pending_attendees.index(pending_attendee)
+        #get team associated with attendee and pop from pending list
+        this_team = e_roster_entity.pending_teams.pop(index)
+        e_roster_entity.teams.append(this_team)
+        # remove attendee from pending and move to event attendees
+        e_roster_entity.pending_attendees.remove(pending_attendee)
+        e_roster_entity.attendees.append(pending_attendee)
+        # edit counts attending
+        event_entity.num_pending_attendees-=1
+        event_entity.num_attendees+=1
+
+        update = attendee_entity.first_name+' '+attendee_entity.last_name+' has joined'
+        self._modUpdates(update, e_updates_entity)
+     
+      else:
+        raise endpoints.NotFoundException('Pending attendee must be a user')
+    else:
+      raise endpoints.NotFoundException(pending_attendee + ' not found in event\'s pending attendees')
+
+    # for attendee in getattr(request, 'approve_list'):
+    #   if attendee in e_roster_entity.pending_attendees:
+    #     if event_entity.capacity:
+    #       if event_entity.num_attendees < event_entity.capacity:
+    #         attendee_entity = ndb.Key(Profile, attendee).get()
+    #         if attendee_entity:
+    #           #get index of attendee in pending list
+    #           index = e_roster_entity.pending_attendees.index(attendee)
+    #           #get team associated with attendee and pop from pending list
+    #           this_team = e_roster_entity.pending_teams.pop(index)
+    #           e_roster_entity.teams.append(this_team)
+    #           e_roster_entity.pending_attendees.remove(attendee)
+    #           e_roster_entity.attendees.append(attendee)
+    #           event_entity.num_pending_attendees-=1
+    #           event_entity.num_attendees+=1
+
+    #           update =  attendee_entity.first_name+' '+attendee_entity.last_name+' has joined'
+    #           self._modUpdates(update, e_updates_entity)
+    #     else:
+    #       raise endpoints.BadRequestException('Event does not have capacity for all requested attendee approvals')
     
+      # e_updates_entity.put()
+      # e_roster_entity.put()
+      # event_entity.put()
     e_updates_entity.put()
     e_roster_entity.put()
     event_entity.put()
-    
+
     return EmptyResponse()
+    # return EventRosterGetResponse(e_roster_entity)
 
   #***HELPER FUNCTION: DENY PENDING EVENT ATTENDEES***
   #Description: deny pending event attendees (only event organizer)
-  #Params: request- PUT request sent to eventDenyPending() endpoint (url safe original event name, event creator email, list of denials)
+  #Params: request- PUT request sent to eventDenyPending() endpoint (url safe original event name, event creator email, denied attendee email)
   #Returns: none
   #Called by: eventDenyPending() endpoint
   @ndb.transactional(xg=True)
@@ -2211,26 +2238,32 @@ class connectEDApi(remote.Service):
 
     #check that user is event organizer
     if user_email != event_entity.e_organizer:
-      raise endpoints.UnauthorizedException('User must be event organizer')
+      raise endpoints.UnauthorizedException('User must be the event organizer')
 
     #get event roster entity
     e_roster_entity = E_Roster.query(ancestor=event_entity.key).get()
     if not e_roster_entity:
       raise endpoints.NotFoundException('Event roster not found')
 
-    #deny member 
-    for member in getattr(request, 'approve_list'):
-      if member in e_roster_entity.pending_attendees:
-        #get index to find corresponding team
-        index = e_roster_entity.pending_attendees.index(member)
-        #remove attendee from pending
-        e_roster_entity.pending_attendees.remove(member)
-        event_entity.num_pending_attendees-=1
-        #remove team from pending
-        removed_team = e_roster_entity.pending_teams.pop(index)
-        if removed_team != '-':
-          event_entity.num_pending_teams -= 1
+    #deny member
+    pending_attendee = request.pending_attendee
+    if pending_attendee in e_roster_entity.pending_attendees:
+      #get index to find corresponding team
+      index = e_roster_entity.pending_attendees.index(pending_attendee)
+      #get team associated with attendee and pop from pending list
+      removed_team = e_roster_entity.pending_teams.pop(index)
+      
+      # remove attendee from pending
+      e_roster_entity.pending_attendees.remove(pending_attendee)
+      
+      # edit counts attending
+      event_entity.num_pending_attendees-=1
+      if removed_team != '-':
+        event_entity.num_pending_teams -= 1
 
+    else:
+      raise endpoints.NotFoundException('Pending attendee must be a user')
+    
     e_roster_entity.put()
     event_entity.put()
     
@@ -2322,7 +2355,7 @@ class connectEDApi(remote.Service):
     return EmptyResponse()
   """
   #***HELPER FUNCTION: REMOVE EVENT***
-  #Description: remove a event entity if it exists
+  #Description: remove an event entity if it exists
   #Params: request- DELETE request query string sent to deleteEvent() endpoint (url safe original event name, event creator email)
   #Returns: name of deleted event
   #Called by: deleteEvent() endpoint
@@ -3526,7 +3559,7 @@ class connectEDApi(remote.Service):
     return self._searchTeam(request, user)
   
   #****ENDPOINT: APPROVE PENDING EVENT ATTENDEES***
-  #-accepts: event name, event organizer email
+  #-accepts: event name, event organizer email, approved email/user
   #-returns: none
   @endpoints.method(EVENT_APPROVE_REQUEST, EmptyResponse,
   path='events/{e_organizer_email}/{url_event_orig_name}/approve', http_method='PUT', name='eventApprovePending')
@@ -3596,13 +3629,12 @@ class connectEDApi(remote.Service):
   def topteams(self, request):
     return self._createTopTeams()
   """
-  
+
 
   ##################################################################################
   ##################           STATIC FUNCTIONS               ######################
   ##################################################################################
 
-  
   #***STATIC FUNCTION: CRON JOB FOR CLEANING EVENTS***
   #Description: called by cron job every 2 hours to clean events (ie. delete past events and convert to history events)
   @staticmethod
